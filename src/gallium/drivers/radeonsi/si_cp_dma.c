@@ -171,7 +171,7 @@ static void si_cp_dma_prepare(struct si_context *sctx, struct pipe_resource *dst
 	}
 
 	if (!(user_flags & SI_CPDMA_SKIP_CHECK_CS_SPACE))
-		si_need_cs_space(sctx);
+		si_need_gfx_cs_space(sctx);
 
 	/* This must be done after need_cs_space. */
 	if (!(user_flags & SI_CPDMA_SKIP_BO_LIST_UPDATE)) {

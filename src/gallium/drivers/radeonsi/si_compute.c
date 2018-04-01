@@ -849,7 +849,7 @@ static void si_launch_grid(
 		}
 	}
 
-	si_need_cs_space(sctx);
+	si_need_gfx_cs_space(sctx);
 
 	if (!sctx->cs_shader_state.initialized)
 		si_initialize_compute(sctx);

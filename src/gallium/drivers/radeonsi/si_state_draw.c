@@ -1404,7 +1404,7 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 		}
 	}
 
-	si_need_cs_space(sctx);
+	si_need_gfx_cs_space(sctx);
 
 	/* Since we've called r600_context_add_resource_size for vertex buffers,
 	 * this must be called after si_need_cs_space, because we must let

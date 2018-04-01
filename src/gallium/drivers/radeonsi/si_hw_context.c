@@ -34,7 +34,7 @@ void si_destroy_saved_cs(struct si_saved_cs *scs)
 }
 
 /* initialize */
-void si_need_cs_space(struct si_context *ctx)
+void si_need_gfx_cs_space(struct si_context *ctx)
 {
 	struct radeon_winsys_cs *cs = ctx->b.gfx.cs;
 
