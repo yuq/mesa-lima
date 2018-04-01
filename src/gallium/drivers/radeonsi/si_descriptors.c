@@ -443,7 +443,7 @@ static void si_set_sampler_view_desc(struct si_context *sctx,
 	if (unlikely(!is_buffer && sview->dcc_incompatible)) {
 		if (vi_dcc_enabled(rtex, view->u.tex.first_level))
 			if (!si_texture_disable_dcc(sctx, rtex))
-				si_decompress_dcc(&sctx->b.b, rtex);
+				si_decompress_dcc(sctx, rtex);
 
 		sview->dcc_incompatible = false;
 	}
@@ -731,7 +731,7 @@ static void si_set_shader_image_desc(struct si_context *ctx,
 			 * has been decompressed already.
 			 */
 			if (!si_texture_disable_dcc(ctx, tex))
-				si_decompress_dcc(&ctx->b.b, tex);
+				si_decompress_dcc(ctx, tex);
 		}
 
 		if (ctx->b.chip_class >= GFX9) {

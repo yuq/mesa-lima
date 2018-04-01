@@ -651,8 +651,8 @@ enum si_blitter_op /* bitmask */
 	SI_DISABLE_RENDER_COND = 8,
 };
 
-void si_blitter_begin(struct pipe_context *ctx, enum si_blitter_op op);
-void si_blitter_end(struct pipe_context *ctx);
+void si_blitter_begin(struct si_context *sctx, enum si_blitter_op op);
+void si_blitter_end(struct si_context *sctx);
 void si_init_blit_functions(struct si_context *sctx);
 void si_decompress_textures(struct si_context *sctx, unsigned shader_mask);
 void si_resource_copy_region(struct pipe_context *ctx,
@@ -662,7 +662,7 @@ void si_resource_copy_region(struct pipe_context *ctx,
 			     struct pipe_resource *src,
 			     unsigned src_level,
 			     const struct pipe_box *src_box);
-void si_decompress_dcc(struct pipe_context *ctx, struct r600_texture *rtex);
+void si_decompress_dcc(struct si_context *sctx, struct r600_texture *rtex);
 void si_blit_decompress_depth(struct pipe_context *ctx,
 			      struct r600_texture *texture,
 			      struct r600_texture *staging,

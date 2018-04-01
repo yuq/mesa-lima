@@ -321,11 +321,11 @@ static void si_pipe_clear_buffer(struct pipe_context *ctx,
 			union pipe_color_union clear_value;
 
 			memcpy(&clear_value, clear_value_ptr, clear_value_size);
-			si_blitter_begin(ctx, SI_DISABLE_RENDER_COND);
+			si_blitter_begin(sctx, SI_DISABLE_RENDER_COND);
 			util_blitter_clear_buffer(sctx->blitter, dst, offset,
 						  size, clear_value_size / 4,
 						  &clear_value);
-			si_blitter_end(ctx);
+			si_blitter_end(sctx);
 			return;
 		}
 	}
