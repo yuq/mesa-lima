@@ -1488,8 +1488,7 @@ void si_set_ring_buffer(struct pipe_context *ctx, uint slot,
 	sctx->descriptors_dirty |= 1u << SI_DESCS_RW_BUFFERS;
 }
 
-static void si_desc_reset_buffer_offset(struct pipe_context *ctx,
-					uint32_t *desc, uint64_t old_buf_va,
+static void si_desc_reset_buffer_offset(uint32_t *desc, uint64_t old_buf_va,
 					struct pipe_resource *new_buf)
 {
 	/* Retrieve the buffer offset from the descriptor. */
@@ -1597,8 +1596,7 @@ static void si_reset_buffer_resources(struct si_context *sctx,
 	while (mask) {
 		unsigned i = u_bit_scan(&mask);
 		if (buffers->buffers[i] == buf) {
-			si_desc_reset_buffer_offset(&sctx->b.b,
-						    descs->list + i*4,
+			si_desc_reset_buffer_offset(descs->list + i*4,
 						    old_va, buf);
 			sctx->descriptors_dirty |= 1u << descriptors_idx;
 
@@ -1612,10 +1610,9 @@ static void si_reset_buffer_resources(struct si_context *sctx,
 /* Update all resource bindings where the buffer is bound, including
  * all resource descriptors. This is invalidate_buffer without
  * the invalidation. */
-void si_rebind_buffer(struct pipe_context *ctx, struct pipe_resource *buf,
+void si_rebind_buffer(struct si_context *sctx, struct pipe_resource *buf,
 		      uint64_t old_va)
 {
-	struct si_context *sctx = (struct si_context*)ctx;
 	struct r600_resource *rbuffer = r600_resource(buf);
 	unsigned i, shader;
 	unsigned num_elems = sctx->vertex_elements ?
@@ -1654,7 +1651,7 @@ void si_rebind_buffer(struct pipe_context *ctx, struct pipe_resource *buf,
 			if (buffers->buffers[i] != buf)
 				continue;
 
-			si_desc_reset_buffer_offset(ctx, descs->list + i*4,
+			si_desc_reset_buffer_offset(descs->list + i*4,
 						    old_va, buf);
 			sctx->descriptors_dirty |= 1u << SI_DESCS_RW_BUFFERS;
 
@@ -1706,8 +1703,7 @@ void si_rebind_buffer(struct pipe_context *ctx, struct pipe_resource *buf,
 				if (samplers->views[i]->texture == buf) {
 					unsigned desc_slot = si_get_sampler_slot(i);
 
-					si_desc_reset_buffer_offset(ctx,
-								    descs->list +
+					si_desc_reset_buffer_offset(descs->list +
 								    desc_slot * 16 + 4,
 								    old_va, buf);
 					sctx->descriptors_dirty |=
@@ -1740,7 +1736,7 @@ void si_rebind_buffer(struct pipe_context *ctx, struct pipe_resource *buf,
 						si_mark_image_range_valid(&images->views[i]);
 
 					si_desc_reset_buffer_offset(
-						ctx, descs->list + desc_slot * 8 + 4,
+						descs->list + desc_slot * 8 + 4,
 						old_va, buf);
 					sctx->descriptors_dirty |=
 						1u << si_sampler_and_image_descriptors_idx(shader);

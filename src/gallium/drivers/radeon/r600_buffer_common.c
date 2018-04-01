@@ -286,7 +286,7 @@ si_invalidate_buffer(struct si_context *sctx,
 
 		/* Reallocate the buffer in the same pipe_resource. */
 		si_alloc_resource(sctx->screen, rbuffer);
-		si_rebind_buffer(&sctx->b.b, &rbuffer->b.b, old_va);
+		si_rebind_buffer(sctx, &rbuffer->b.b, old_va);
 	} else {
 		util_range_set_empty(&rbuffer->valid_buffer_range);
 	}
@@ -299,6 +299,7 @@ void si_replace_buffer_storage(struct pipe_context *ctx,
 				 struct pipe_resource *dst,
 				 struct pipe_resource *src)
 {
+	struct si_context *sctx = (struct si_context*)ctx;
 	struct r600_resource *rdst = r600_resource(dst);
 	struct r600_resource *rsrc = r600_resource(src);
 	uint64_t old_gpu_address = rdst->gpu_address;
@@ -316,7 +317,7 @@ void si_replace_buffer_storage(struct pipe_context *ctx,
 	assert(rdst->bo_alignment == rsrc->bo_alignment);
 	assert(rdst->domains == rsrc->domains);
 
-	si_rebind_buffer(ctx, dst, old_gpu_address);
+	si_rebind_buffer(sctx, dst, old_gpu_address);
 }
 
 static void si_invalidate_resource(struct pipe_context *ctx,
