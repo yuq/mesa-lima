@@ -705,6 +705,7 @@ void cik_emit_prefetch_L2(struct si_context *sctx);
 void si_init_cp_dma_functions(struct si_context *sctx);
 
 /* si_debug.c */
+void si_destroy_saved_cs(struct si_saved_cs *scs);
 void si_auto_log_cs(void *data, struct u_log_context *log);
 void si_log_hw_flush(struct si_context *sctx);
 void si_log_draw_state(struct si_context *sctx, struct u_log_context *log);
@@ -728,7 +729,6 @@ const char *si_get_family_name(const struct si_screen *sscreen);
 void si_init_screen_get_functions(struct si_screen *sscreen);
 
 /* si_hw_context.c */
-void si_destroy_saved_cs(struct si_saved_cs *scs);
 void si_flush_gfx_cs(void *context, unsigned flags,
 		     struct pipe_fence_handle **fence);
 void si_begin_new_gfx_cs(struct si_context *ctx);

@@ -26,13 +26,6 @@
 
 #include "util/os_time.h"
 
-void si_destroy_saved_cs(struct si_saved_cs *scs)
-{
-	si_clear_saved_cs(&scs->gfx);
-	r600_resource_reference(&scs->trace_buf, NULL);
-	free(scs);
-}
-
 /* initialize */
 void si_need_gfx_cs_space(struct si_context *ctx)
 {

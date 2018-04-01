@@ -37,6 +37,13 @@ static void si_dump_bo_list(struct si_context *sctx,
 
 DEBUG_GET_ONCE_OPTION(replace_shaders, "RADEON_REPLACE_SHADERS", NULL)
 
+void si_destroy_saved_cs(struct si_saved_cs *scs)
+{
+	si_clear_saved_cs(&scs->gfx);
+	r600_resource_reference(&scs->trace_buf, NULL);
+	free(scs);
+}
+
 static void si_dump_shader(struct si_screen *sscreen,
 			   enum pipe_shader_type processor,
 			   const struct si_shader *shader, FILE *f)
