@@ -480,7 +480,7 @@ bool si_texture_disable_dcc(struct r600_common_context *rctx,
 		mtx_lock(&sscreen->aux_context_lock);
 
 	/* Decompress DCC. */
-	rctx->decompress_dcc(&rctx->b, rtex);
+	si_decompress_dcc(&rctx->b, rtex);
 	rctx->b.flush(&rctx->b, NULL, 0);
 
 	if (&rctx->b == sscreen->aux_context)
@@ -1974,7 +1974,7 @@ void vi_disable_dcc_if_incompatible_format(struct r600_common_context *rctx,
 
 	if (vi_dcc_formats_are_incompatible(tex, level, view_format))
 		if (!si_texture_disable_dcc(rctx, (struct r600_texture*)tex))
-			rctx->decompress_dcc(&rctx->b, rtex);
+			si_decompress_dcc(&rctx->b, rtex);
 }
 
 struct pipe_surface *si_create_surface_custom(struct pipe_context *pipe,

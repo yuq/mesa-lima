@@ -1325,8 +1325,7 @@ static void si_flush_resource(struct pipe_context *ctx,
 	}
 }
 
-static void si_decompress_dcc(struct pipe_context *ctx,
-			      struct r600_texture *rtex)
+void si_decompress_dcc(struct pipe_context *ctx, struct r600_texture *rtex)
 {
 	if (!rtex->dcc_offset)
 		return;
@@ -1343,5 +1342,4 @@ void si_init_blit_functions(struct si_context *sctx)
 	sctx->b.b.flush_resource = si_flush_resource;
 	sctx->b.b.generate_mipmap = si_generate_mipmap;
 	sctx->b.blit_decompress_depth = si_blit_decompress_depth;
-	sctx->b.decompress_dcc = si_decompress_dcc;
 }

@@ -492,9 +492,6 @@ struct r600_common_context {
 				      unsigned first_level, unsigned last_level,
 				      unsigned first_layer, unsigned last_layer,
 				      unsigned first_sample, unsigned last_sample);
-
-	void (*decompress_dcc)(struct pipe_context *ctx,
-			       struct r600_texture *rtex);
 };
 
 /* r600_buffer_common.c */

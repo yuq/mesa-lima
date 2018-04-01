@@ -660,6 +660,7 @@ void si_resource_copy_region(struct pipe_context *ctx,
 			     struct pipe_resource *src,
 			     unsigned src_level,
 			     const struct pipe_box *src_box);
+void si_decompress_dcc(struct pipe_context *ctx, struct r600_texture *rtex);
 
 /* si_clear.c */
 void vi_dcc_clear_level(struct si_context *sctx,
