@@ -34,44 +34,44 @@
 
 static enum pipe_reset_status r600_get_reset_status(struct pipe_context *ctx)
 {
-	struct r600_common_context *rctx = (struct r600_common_context *)ctx;
-	unsigned latest = rctx->ws->query_value(rctx->ws,
-						RADEON_GPU_RESET_COUNTER);
+	struct si_context *sctx = (struct si_context *)ctx;
+	unsigned latest = sctx->b.ws->query_value(sctx->b.ws,
+						  RADEON_GPU_RESET_COUNTER);
 
-	if (rctx->gpu_reset_counter == latest)
+	if (sctx->b.gpu_reset_counter == latest)
 		return PIPE_NO_RESET;
 
-	rctx->gpu_reset_counter = latest;
+	sctx->b.gpu_reset_counter = latest;
 	return PIPE_UNKNOWN_CONTEXT_RESET;
 }
 
 static void r600_set_device_reset_callback(struct pipe_context *ctx,
 					   const struct pipe_device_reset_callback *cb)
 {
-	struct r600_common_context *rctx = (struct r600_common_context *)ctx;
+	struct si_context *sctx = (struct si_context *)ctx;
 
 	if (cb)
-		rctx->device_reset_callback = *cb;
+		sctx->b.device_reset_callback = *cb;
 	else
-		memset(&rctx->device_reset_callback, 0,
-		       sizeof(rctx->device_reset_callback));
+		memset(&sctx->b.device_reset_callback, 0,
+		       sizeof(sctx->b.device_reset_callback));
 }
 
-bool si_check_device_reset(struct r600_common_context *rctx)
+bool si_check_device_reset(struct si_context *sctx)
 {
 	enum pipe_reset_status status;
 
-	if (!rctx->device_reset_callback.reset)
+	if (!sctx->b.device_reset_callback.reset)
 		return false;
 
-	if (!rctx->b.get_device_reset_status)
+	if (!sctx->b.b.get_device_reset_status)
 		return false;
 
-	status = rctx->b.get_device_reset_status(&rctx->b);
+	status = sctx->b.b.get_device_reset_status(&sctx->b.b);
 	if (status == PIPE_NO_RESET)
 		return false;
 
-	rctx->device_reset_callback.reset(rctx->device_reset_callback.data, status);
+	sctx->b.device_reset_callback.reset(sctx->b.device_reset_callback.data, status);
 	return true;
 }
 
@@ -109,122 +109,121 @@ static bool r600_resource_commit(struct pipe_context *pctx,
 	return ctx->b.ws->buffer_commit(res->buf, box->x, box->width, commit);
 }
 
-bool si_common_context_init(struct r600_common_context *rctx,
+bool si_common_context_init(struct si_context *sctx,
 			    struct si_screen *sscreen,
 			    unsigned context_flags)
 {
-	struct si_context *sctx = (struct si_context*)rctx;
 
-	slab_create_child(&rctx->pool_transfers, &sscreen->pool_transfers);
-	slab_create_child(&rctx->pool_transfers_unsync, &sscreen->pool_transfers);
+	slab_create_child(&sctx->b.pool_transfers, &sscreen->pool_transfers);
+	slab_create_child(&sctx->b.pool_transfers_unsync, &sscreen->pool_transfers);
 
-	rctx->screen = sscreen;
-	rctx->ws = sscreen->ws;
-	rctx->family = sscreen->info.family;
-	rctx->chip_class = sscreen->info.chip_class;
+	sctx->b.screen = sscreen;
+	sctx->b.ws = sscreen->ws;
+	sctx->b.family = sscreen->info.family;
+	sctx->b.chip_class = sscreen->info.chip_class;
 
-	rctx->b.resource_commit = r600_resource_commit;
+	sctx->b.b.resource_commit = r600_resource_commit;
 
 	if (sscreen->info.drm_major == 2 && sscreen->info.drm_minor >= 43) {
-		rctx->b.get_device_reset_status = r600_get_reset_status;
-		rctx->gpu_reset_counter =
-			rctx->ws->query_value(rctx->ws,
-					      RADEON_GPU_RESET_COUNTER);
+		sctx->b.b.get_device_reset_status = r600_get_reset_status;
+		sctx->b.gpu_reset_counter =
+				sctx->b.ws->query_value(sctx->b.ws,
+							RADEON_GPU_RESET_COUNTER);
 	}
 
-	rctx->b.set_device_reset_callback = r600_set_device_reset_callback;
+	sctx->b.b.set_device_reset_callback = r600_set_device_reset_callback;
 
 	si_init_context_texture_functions(sctx);
 	si_init_query_functions(sctx);
 
-	if (rctx->chip_class == CIK ||
-	    rctx->chip_class == VI ||
-	    rctx->chip_class == GFX9) {
-		rctx->eop_bug_scratch = (struct r600_resource*)
-			pipe_buffer_create(&sscreen->b, 0, PIPE_USAGE_DEFAULT,
-					   16 * sscreen->info.num_render_backends);
-		if (!rctx->eop_bug_scratch)
+	if (sctx->b.chip_class == CIK ||
+	    sctx->b.chip_class == VI ||
+	    sctx->b.chip_class == GFX9) {
+		sctx->b.eop_bug_scratch = (struct r600_resource*)
+					  pipe_buffer_create(&sscreen->b, 0, PIPE_USAGE_DEFAULT,
+							     16 * sscreen->info.num_render_backends);
+		if (!sctx->b.eop_bug_scratch)
 			return false;
 	}
 
-	rctx->allocator_zeroed_memory =
-		u_suballocator_create(&rctx->b, sscreen->info.gart_page_size,
-				      0, PIPE_USAGE_DEFAULT, 0, true);
-	if (!rctx->allocator_zeroed_memory)
+	sctx->b.allocator_zeroed_memory =
+			u_suballocator_create(&sctx->b.b, sscreen->info.gart_page_size,
+					      0, PIPE_USAGE_DEFAULT, 0, true);
+	if (!sctx->b.allocator_zeroed_memory)
 		return false;
 
-	rctx->b.stream_uploader = u_upload_create(&rctx->b, 1024 * 1024,
-						  0, PIPE_USAGE_STREAM,
-						  R600_RESOURCE_FLAG_READ_ONLY);
-	if (!rctx->b.stream_uploader)
+	sctx->b.b.stream_uploader = u_upload_create(&sctx->b.b, 1024 * 1024,
+						    0, PIPE_USAGE_STREAM,
+						    R600_RESOURCE_FLAG_READ_ONLY);
+	if (!sctx->b.b.stream_uploader)
 		return false;
 
-	rctx->b.const_uploader = u_upload_create(&rctx->b, 128 * 1024,
-						 0, PIPE_USAGE_DEFAULT,
-						 R600_RESOURCE_FLAG_32BIT |
-						 (sscreen->cpdma_prefetch_writes_memory ?
-							0 : R600_RESOURCE_FLAG_READ_ONLY));
-	if (!rctx->b.const_uploader)
+	sctx->b.b.const_uploader = u_upload_create(&sctx->b.b, 128 * 1024,
+						   0, PIPE_USAGE_DEFAULT,
+						   R600_RESOURCE_FLAG_32BIT |
+						   (sscreen->cpdma_prefetch_writes_memory ?
+							    0 : R600_RESOURCE_FLAG_READ_ONLY));
+	if (!sctx->b.b.const_uploader)
 		return false;
 
-	rctx->cached_gtt_allocator = u_upload_create(&rctx->b, 16 * 1024,
-						     0, PIPE_USAGE_STAGING, 0);
-	if (!rctx->cached_gtt_allocator)
+	sctx->b.cached_gtt_allocator = u_upload_create(&sctx->b.b, 16 * 1024,
+						       0, PIPE_USAGE_STAGING, 0);
+	if (!sctx->b.cached_gtt_allocator)
 		return false;
 
-	rctx->ctx = rctx->ws->ctx_create(rctx->ws);
-	if (!rctx->ctx)
+	sctx->b.ctx = sctx->b.ws->ctx_create(sctx->b.ws);
+	if (!sctx->b.ctx)
 		return false;
 
 	if (sscreen->info.num_sdma_rings && !(sscreen->debug_flags & DBG(NO_ASYNC_DMA))) {
-		rctx->dma_cs = rctx->ws->cs_create(rctx->ctx, RING_DMA,
-						   (void*)si_flush_dma_cs,
-						   rctx);
+		sctx->b.dma_cs = sctx->b.ws->cs_create(sctx->b.ctx, RING_DMA,
+						       (void*)si_flush_dma_cs,
+						       sctx);
 	}
 
 	return true;
 }
 
-void si_common_context_cleanup(struct r600_common_context *rctx)
+void si_common_context_cleanup(struct si_context *sctx)
 {
 	unsigned i,j;
 
 	/* Release DCC stats. */
-	for (i = 0; i < ARRAY_SIZE(rctx->dcc_stats); i++) {
-		assert(!rctx->dcc_stats[i].query_active);
+	for (i = 0; i < ARRAY_SIZE(sctx->b.dcc_stats); i++) {
+		assert(!sctx->b.dcc_stats[i].query_active);
 
-		for (j = 0; j < ARRAY_SIZE(rctx->dcc_stats[i].ps_stats); j++)
-			if (rctx->dcc_stats[i].ps_stats[j])
-				rctx->b.destroy_query(&rctx->b,
-						      rctx->dcc_stats[i].ps_stats[j]);
+		for (j = 0; j < ARRAY_SIZE(sctx->b.dcc_stats[i].ps_stats); j++)
+			if (sctx->b.dcc_stats[i].ps_stats[j])
+				sctx->b.b.destroy_query(&sctx->b.b,
+							sctx->b.dcc_stats[i].ps_stats[j]);
 
-		r600_texture_reference(&rctx->dcc_stats[i].tex, NULL);
+		r600_texture_reference(&sctx->b.dcc_stats[i].tex, NULL);
 	}
 
-	if (rctx->query_result_shader)
-		rctx->b.delete_compute_state(&rctx->b, rctx->query_result_shader);
+	if (sctx->b.query_result_shader)
+		sctx->b.b.delete_compute_state(&sctx->b.b, sctx->b.query_result_shader);
 
-	if (rctx->gfx_cs)
-		rctx->ws->cs_destroy(rctx->gfx_cs);
-	if (rctx->dma_cs)
-		rctx->ws->cs_destroy(rctx->dma_cs);
-	if (rctx->ctx)
-		rctx->ws->ctx_destroy(rctx->ctx);
+	if (sctx->b.gfx_cs)
+		sctx->b.ws->cs_destroy(sctx->b.gfx_cs);
+	if (sctx->b.dma_cs)
+		sctx->b.ws->cs_destroy(sctx->b.dma_cs);
+	if (sctx->b.ctx)
+		sctx->b.ws->ctx_destroy(sctx->b.ctx);
 
-	if (rctx->b.stream_uploader)
-		u_upload_destroy(rctx->b.stream_uploader);
-	if (rctx->b.const_uploader)
-		u_upload_destroy(rctx->b.const_uploader);
-	if (rctx->cached_gtt_allocator)
-		u_upload_destroy(rctx->cached_gtt_allocator);
+	if (sctx->b.b.stream_uploader)
+		u_upload_destroy(sctx->b.b.stream_uploader);
+	if (sctx->b.b.const_uploader)
+		u_upload_destroy(sctx->b.b.const_uploader);
+	if (sctx->b.cached_gtt_allocator)
+		u_upload_destroy(sctx->b.cached_gtt_allocator);
 
-	slab_destroy_child(&rctx->pool_transfers);
-	slab_destroy_child(&rctx->pool_transfers_unsync);
+	slab_destroy_child(&sctx->b.pool_transfers);
+	slab_destroy_child(&sctx->b.pool_transfers_unsync);
 
-	if (rctx->allocator_zeroed_memory) {
-		u_suballocator_destroy(rctx->allocator_zeroed_memory);
+	if (sctx->b.allocator_zeroed_memory) {
+		u_suballocator_destroy(sctx->b.allocator_zeroed_memory);
 	}
-	rctx->ws->fence_reference(&rctx->last_gfx_fence, NULL);
-	rctx->ws->fence_reference(&rctx->last_sdma_fence, NULL);
-	r600_resource_reference(&rctx->eop_bug_scratch, NULL);
+	sctx->b.ws->fence_reference(&sctx->b.last_gfx_fence, NULL);
+	sctx->b.ws->fence_reference(&sctx->b.last_sdma_fence, NULL);
+	r600_resource_reference(&sctx->b.eop_bug_scratch, NULL);
 }

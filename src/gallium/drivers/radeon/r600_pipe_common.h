@@ -506,11 +506,11 @@ void si_init_screen_buffer_functions(struct si_screen *sscreen);
 void si_init_buffer_functions(struct si_context *sctx);
 
 /* r600_common_pipe.c */
-bool si_common_context_init(struct r600_common_context *rctx,
+bool si_common_context_init(struct si_context *sctx,
 			    struct si_screen *sscreen,
 			    unsigned context_flags);
-void si_common_context_cleanup(struct r600_common_context *rctx);
-bool si_check_device_reset(struct r600_common_context *rctx);
+void si_common_context_cleanup(struct si_context *sctx);
+bool si_check_device_reset(struct si_context *sctx);
 
 /* r600_gpu_load.c */
 void si_gpu_load_kill_thread(struct si_screen *sscreen);

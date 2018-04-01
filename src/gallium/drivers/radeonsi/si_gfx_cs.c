@@ -77,7 +77,7 @@ void si_flush_gfx_cs(struct si_context *ctx, unsigned flags,
 	if (!radeon_emitted(cs, ctx->b.initial_gfx_cs_size))
 		return;
 
-	if (si_check_device_reset(&ctx->b))
+	if (si_check_device_reset(ctx))
 		return;
 
 	if (ctx->screen->debug_flags & DBG(CHECK_VM))

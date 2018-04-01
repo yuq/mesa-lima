@@ -160,7 +160,7 @@ static void si_destroy_context(struct pipe_context *context)
 	if (sctx->blitter)
 		util_blitter_destroy(sctx->blitter);
 
-	si_common_context_cleanup(&sctx->b);
+	si_common_context_cleanup(sctx);
 
 	LLVMDisposeTargetMachine(sctx->tm);
 
@@ -264,7 +264,7 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 	sctx->screen = sscreen; /* Easy accessing of screen/winsys. */
 	sctx->is_debug = (flags & PIPE_CONTEXT_DEBUG) != 0;
 
-	if (!si_common_context_init(&sctx->b, sscreen, flags))
+	if (!si_common_context_init(sctx, sscreen, flags))
 		goto fail;
 
 	if (sscreen->info.drm_major == 3)
