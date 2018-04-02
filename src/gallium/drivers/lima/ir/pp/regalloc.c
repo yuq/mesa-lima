@@ -181,19 +181,43 @@ static ppir_reg *ppir_regalloc_build_liveness_info(ppir_compiler *comp)
          }
 
          /* update reg live_out from node src (read) */
-         if (node->type == ppir_node_type_alu) {
+         switch (node->type) {
+         case ppir_node_type_alu:
+         {
             ppir_alu_node *alu = ppir_node_to_alu(node);
             for (int i = 0; i < alu->num_src; i++) {
                ppir_reg *reg = get_src_reg(alu->src + i);
                if (reg && node->instr->seq > reg->live_out)
                   reg->live_out = node->instr->seq;
             }
+            break;
          }
-         else if (node->type == ppir_node_type_store) {
+         case ppir_node_type_store:
+         {
             ppir_store_node *store = ppir_node_to_store(node);
             ppir_reg *reg = get_src_reg(&store->src);
             if (reg && node->instr->seq > reg->live_out)
                reg->live_out = node->instr->seq;
+            break;
+         }
+         case ppir_node_type_load:
+         {
+            ppir_load_node *load = ppir_node_to_load(node);
+            ppir_reg *reg = get_src_reg(&load->src);
+            if (reg && node->instr->seq > reg->live_out)
+               reg->live_out = node->instr->seq;
+            break;
+         }
+         case ppir_node_type_load_texture:
+         {
+            ppir_load_texture_node *load_tex = ppir_node_to_load_texture(node);
+            ppir_reg *reg = get_src_reg(&load_tex->src_coords);
+            if (reg && node->instr->seq > reg->live_out)
+               reg->live_out = node->instr->seq;
+            break;
+         }
+         default:
+            break;
          }
       }
    }
@@ -237,7 +261,9 @@ static void ppir_regalloc_print_result(ppir_compiler *comp)
 
             printf("|");
 
-            if (node->type == ppir_node_type_alu) {
+            switch (node->type) {
+            case ppir_node_type_alu:
+            {
                ppir_alu_node *alu = ppir_node_to_alu(node);
                for (int j = 0; j < alu->num_src; j++) {
                   if (j)
@@ -245,10 +271,29 @@ static void ppir_regalloc_print_result(ppir_compiler *comp)
 
                   printf("%d", ppir_target_get_src_reg_index(alu->src + j));
                }
+               break;
             }
-            else if (node->type == ppir_node_type_store) {
+            case ppir_node_type_store:
+            {
                ppir_store_node *store = ppir_node_to_store(node);
                printf("%d", ppir_target_get_src_reg_index(&store->src));
+               break;
+            }
+            case ppir_node_type_load:
+            {
+               ppir_load_node *load = ppir_node_to_load(node);
+               if (!load->num_components)
+                  printf("%d", ppir_target_get_src_reg_index(&load->src));
+               break;
+            }
+            case ppir_node_type_load_texture:
+            {
+               ppir_load_texture_node *load_tex = ppir_node_to_load_texture(node);
+               printf("%d", ppir_target_get_src_reg_index(&load_tex->src_coords));
+               break;
+            }
+            default:
+               break;
             }
 
             printf(")");
