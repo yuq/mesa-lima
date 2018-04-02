@@ -607,7 +607,8 @@ void si_nir_scan_shader(const struct nir_shader *nir,
 		}
 
 		unsigned loc = variable->data.location;
-		if (loc == FRAG_RESULT_COLOR &&
+		if (nir->info.stage == MESA_SHADER_FRAGMENT &&
+		    loc == FRAG_RESULT_COLOR &&
 		    nir->info.outputs_written & (1ull << loc)) {
 			assert(attrib_count == 1);
 			info->properties[TGSI_PROPERTY_FS_COLOR0_WRITES_ALL_CBUFS] = true;
