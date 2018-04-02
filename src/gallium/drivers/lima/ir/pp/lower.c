@@ -236,25 +236,51 @@ static bool ppir_lower_vec_to_scalar(ppir_block *block, ppir_node *node)
 
 static bool ppir_lower_texture(ppir_block *block, ppir_node *node)
 {
-   ppir_node *pred;
+   ppir_load_texture_node *load_tex = ppir_node_to_load_texture(node);
 
-   /* We expect a single predecessor for tex load node */
-   assert(ppir_node_has_single_pred(node));
-
-   pred = ppir_node_first_pred(node);
-   if (pred->op == ppir_op_load_varying) {
-      /* If ldtex is the only successor of load_varying node
-       * we're good. Just change load_varying op type to load_coords.
-       */
-      if (ppir_node_has_single_succ(pred)) {
-         pred->op = ppir_op_load_coords;
-         return true;
+   if (ppir_node_has_single_pred(node)) {
+      ppir_node *pred = ppir_node_first_pred(node);
+      if (pred->op == ppir_op_load_varying) {
+         /* If ldtex is the only successor of load_varying node
+          * we're good. Just change load_varying op type to load_coords.
+          */
+         if (ppir_node_has_single_succ(pred)) {
+            pred->op = ppir_op_load_coords;
+            return true;
+         }
       }
    }
 
-   /* Otherwise we need to create load_varying node */
-   ppir_debug("texld coords are not in varying. Not supported yet\n");
-   return false;
+   /* Otherwise we need to create load_coords node */
+   ppir_load_node *load = ppir_node_create(block, ppir_op_load_coords, -1, 0);
+   if (!load)
+      return false;
+   list_addtail(&load->node.list, &node->list);
+
+   ppir_debug("%s create load_coords node %d for %d\n",
+              __FUNCTION__, load->node.index, node->index);
+
+   ppir_dest *dest = &load->dest;
+   dest->type = ppir_target_ssa;
+   dest->ssa.num_components = load_tex->src_coords.ssa->num_components;
+   dest->ssa.live_in = INT_MAX;
+   dest->ssa.live_out = 0;
+   dest->write_mask = u_bit_consecutive(0, dest->ssa.num_components);
+
+   load->src = load_tex->src_coords;
+
+   ppir_src *src = &load_tex->src_coords;
+   src->type = ppir_target_ssa;
+   src->ssa = &dest->ssa;
+
+   ppir_node_foreach_pred_safe(node, dep) {
+      ppir_node *pred = dep->pred;
+      ppir_node_remove_dep(dep);
+      ppir_node_add_dep(&load->node, pred);
+   }
+
+   ppir_node_add_dep(node, &load->node);
+   return true;
 }
 
 static bool (*ppir_lower_funcs[ppir_op_num])(ppir_block *, ppir_node *) = {
