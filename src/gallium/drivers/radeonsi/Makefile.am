@@ -37,6 +37,13 @@ noinst_LTLIBRARIES = libradeonsi.la
 
 libradeonsi_la_SOURCES = $(C_SOURCES)
 
+libradeonsi_la_LIBADD = \
+	$(CLOCK_LIB) \
+	$(LLVM_LIBS)
+
+libradeonsi_la_LDFLAGS = \
+	$(LLVM_LDFLAGS)
+
 GEN_DRIINFO_INPUTS = \
 	$(top_srcdir)/src/gallium/auxiliary/pipe-loader/driinfo_gallium.h \
 	$(srcdir)/driinfo_radeonsi.h

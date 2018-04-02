@@ -44,4 +44,24 @@ C_SOURCES := \
 	si_state.h \
 	si_test_dma.c \
 	si_texture.c \
-	si_uvd.c
+	si_uvd.c \
+	../radeon/r600_perfcounter.c \
+	../radeon/r600_pipe_common.h \
+	../radeon/radeon_uvd.c \
+	../radeon/radeon_uvd.h \
+	../radeon/radeon_vcn_dec.c \
+	../radeon/radeon_vcn_dec.h \
+	../radeon/radeon_vcn_enc_1_2.c \
+	../radeon/radeon_vcn_enc.c \
+	../radeon/radeon_vcn_enc.h \
+	../radeon/radeon_uvd_enc_1_1.c \
+	../radeon/radeon_uvd_enc.c \
+	../radeon/radeon_uvd_enc.h \
+	../radeon/radeon_vce_40_2_2.c \
+	../radeon/radeon_vce_50.c \
+	../radeon/radeon_vce_52.c \
+	../radeon/radeon_vce.c \
+	../radeon/radeon_vce.h \
+	../radeon/radeon_video.c \
+	../radeon/radeon_video.h \
+	../radeon/radeon_winsys.h
