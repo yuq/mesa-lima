@@ -27,6 +27,8 @@
 #include "util/u_format.h"
 #include "util/u_debug.h"
 #include "util/u_half.h"
+#include "util/u_helpers.h"
+#include "util/u_inlines.h"
 #include "util/hash_table.h"
 
 #include "lima_context.h"
@@ -279,8 +281,9 @@ lima_pack_vs_cmd(struct lima_context *ctx, const struct pipe_draw_info *info)
    vs_cmd[i++] = lima_ctx_buff_va(ctx, lima_ctx_buff_gp_varying_info);
    vs_cmd[i++] = 0x20000008 | (num_varryings << 17); /* VARYINGS_ADDRESS */
 
-   vs_cmd[i++] = (info->count << 24) | (info->index_size ? 1 : 0);
-   vs_cmd[i++] = 0x00000000 | (info->count >> 8); /* DRAW */
+   unsigned num = info->index_size ? (info->max_index - info->min_index + 1) : info->count;
+   vs_cmd[i++] = (num << 24) | (info->index_size ? 1 : 0);
+   vs_cmd[i++] = 0x00000000 | (num >> 8); /* DRAW */
 
    vs_cmd[i++] = 0x00000000;
    vs_cmd[i++] = 0x60000000; /* ?? */
@@ -394,11 +397,23 @@ lima_pack_plbu_cmd(struct lima_context *ctx, const struct pipe_draw_info *info)
       plbu_cmd[i++] = gl_position_va;
       plbu_cmd[i++] = 0x10000100; /* INDEXED_DEST */
 
-      struct lima_resource *res = lima_resource(info->index.resource);
+      struct pipe_resource *indexbuf = NULL;
+      unsigned index_offset = 0;
+      struct lima_resource *res;
+      if (info->has_user_indices) {
+         util_upload_index_buffer(&ctx->base, info, &indexbuf, &index_offset);
+         res = lima_resource(indexbuf);
+      }
+      else
+         res = lima_resource(info->index.resource);
+
       lima_bo_update(res->bo, false, true);
-      plbu_cmd[i++] = res->bo->va + info->start +
-         info->start_instance * info->index_size;
+      lima_submit_add_bo(ctx->gp_submit, res->bo, LIMA_SUBMIT_BO_READ);
+      plbu_cmd[i++] = res->bo->va + info->start * info->index_size + index_offset;
       plbu_cmd[i++] = 0x10000101; /* INDICES */
+
+      if (indexbuf)
+         pipe_resource_reference(&indexbuf, NULL);
    }
    else {
       /* can this make the attribute info static? */
@@ -411,9 +426,10 @@ lima_pack_plbu_cmd(struct lima_context *ctx, const struct pipe_draw_info *info)
    plbu_cmd[i++] = 0x60000000; /* ARRAYS_SEMAPHORE */
 
    if (info->index_size) {
-      plbu_cmd[i++] = (info->count << 24) | info->start;
+      unsigned num = info->max_index - info->min_index + 1;
+      plbu_cmd[i++] = (num << 24) | info->min_index;
       plbu_cmd[i++] = 0x00000000 | 0x00200000 |
-         ((info->mode & 0x1F) << 16) | (info->count >> 8); /* DRAW | DRAW_ELEMENTS */
+         ((info->mode & 0x1F) << 16) | (info->min_index >> 8); /* DRAW | DRAW_ELEMENTS */
    }
 
 done:
@@ -703,8 +719,9 @@ lima_update_gp_attribute_info(struct lima_context *ctx, const struct pipe_draw_i
 
       lima_submit_add_bo(ctx->gp_submit, res->bo, LIMA_SUBMIT_BO_READ);
 
+      unsigned start = info->index_size ? info->min_index : info->start;
       attribute[n++] = res->bo->va + pvb->buffer_offset + pve->src_offset
-         + info->start * pvb->stride;
+         + start * pvb->stride;
       attribute[n++] = (pvb->stride << 11) |
          (lima_pipe_format_to_attrib_type(pve->src_format) << 2) |
          (util_format_get_nr_components(pve->src_format) - 1);
