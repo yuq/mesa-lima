@@ -6846,7 +6846,7 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 
 			si_build_wrapper_function(&ctx,
 						  parts + !vs_needs_prolog,
-						  4 - !vs_needs_prolog, 0,
+						  4 - !vs_needs_prolog, vs_needs_prolog,
 						  vs_needs_prolog ? 2 : 1);
 		} else {
 			LLVMValueRef parts[2];
@@ -6968,6 +6968,10 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 		ctx.shader->config.private_mem_vgprs =
 			ac_count_scratch_private_memory(ctx.main_fn);
 	}
+
+	/* Make sure the input is a pointer and not integer followed by inttoptr. */
+	assert(LLVMGetTypeKind(LLVMTypeOf(LLVMGetParam(ctx.main_fn, 0))) ==
+	       LLVMPointerTypeKind);
 
 	/* Compile to bytecode. */
 	r = si_compile_llvm(sscreen, &shader->binary, &shader->config, tm,
