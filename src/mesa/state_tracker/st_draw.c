@@ -163,9 +163,12 @@ st_draw_vbo(struct gl_context *ctx,
 
    if (ib) {
       struct gl_buffer_object *bufobj = ib->obj;
+      struct pipe_screen *screen = st->pipe->screen;
+      bool needs_minmax_index = st->draw_needs_minmax_index ||
+         screen->get_param(screen, PIPE_CAP_FORCE_COMPUTE_MINMAX_INDICES);
 
       /* Get index bounds for user buffers. */
-      if (!index_bounds_valid && st->draw_needs_minmax_index) {
+      if (!index_bounds_valid && needs_minmax_index) {
          vbo_get_minmax_indices(ctx, prims, ib, &min_index, &max_index,
                                 nr_prims);
       }
