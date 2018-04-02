@@ -810,6 +810,10 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
 
         const unsigned loop_label = l++;
 
+        /* Declare all light constants to allow indirect adressing */
+        for (i = 32; i < 96; i++)
+            ureg_DECL_constant(ureg, i);
+
         ureg_MOV(ureg, rCtr, ureg_imm1f(ureg, 32.0f)); /* &lightconst(0) */
         ureg_MOV(ureg, rD, ureg_imm1f(ureg, 0.0f));
         ureg_MOV(ureg, rA, ureg_imm1f(ureg, 0.0f));
