@@ -285,6 +285,10 @@ static ppir_node *ppir_emit_tex(ppir_block *block, nir_instr *ni)
 
    node->sampler_dim = instr->sampler_dim;
 
+   for (int i = 0; i < instr->coord_components; i++)
+         node->src_coords.swizzle[i] = i;
+
+   assert(instr->num_srcs == 1);
    for (int i = 0; i < instr->num_srcs; i++) {
       switch (instr->src[i].src_type) {
       case nir_tex_src_coord:

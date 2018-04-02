@@ -229,6 +229,7 @@ typedef struct {
    int index;
    int num_components;
    ppir_dest dest;
+   ppir_src src;
 } ppir_load_node;
 
 typedef struct {
@@ -418,6 +419,8 @@ static inline int ppir_target_get_src_reg_index(ppir_src *src)
    case ppir_target_register:
       return src->reg->index;
    case ppir_target_pipeline:
+      if (src->pipeline == ppir_pipeline_reg_discard)
+         return 15 * 4;
       return (src->pipeline + 12) * 4;
    }
 
