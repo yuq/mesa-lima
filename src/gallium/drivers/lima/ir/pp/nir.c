@@ -92,7 +92,7 @@ static void *ppir_node_create_dest(ppir_block *block, ppir_op op,
 }
 
 static void ppir_node_add_src(ppir_compiler *comp, ppir_node *node,
-                              ppir_src *ps, nir_src *ns)
+                              ppir_src *ps, nir_src *ns, unsigned mask)
 {
    ppir_node *child = NULL;
 
@@ -101,14 +101,7 @@ static void ppir_node_add_src(ppir_compiler *comp, ppir_node *node,
       ppir_node_add_dep(node, child);
    }
    else {
-      unsigned mask;
-      ppir_dest *dest = ppir_node_get_dest(node);
       nir_register *reg = ns->reg.reg;
-      if (dest)
-         mask = dest->write_mask;
-      else
-         mask = u_bit_consecutive(0, reg->num_components);
-
       while (mask) {
          int swizzle = ps->swizzle[u_bit_scan(&mask)];
          child = comp->var_nodes[(reg->index << 2) + comp->reg_base + swizzle];
@@ -158,6 +151,22 @@ static ppir_node *ppir_emit_alu(ppir_block *block, nir_instr *ni)
    if (nd->saturate)
       pd->modifier = ppir_outmod_clamp_fraction;
 
+   unsigned src_mask;
+   switch (op) {
+   case ppir_op_dot2:
+      src_mask = 0b0011;
+      break;
+   case ppir_op_dot3:
+      src_mask = 0b0111;
+      break;
+   case ppir_op_dot4:
+      src_mask = 0b1111;
+      break;
+   default:
+      src_mask = pd->write_mask;
+      break;
+   }
+
    unsigned num_child = nir_op_infos[instr->op].num_inputs;
    node->num_src = num_child;
 
@@ -165,7 +174,7 @@ static ppir_node *ppir_emit_alu(ppir_block *block, nir_instr *ni)
       nir_alu_src *ns = instr->src + i;
       ppir_src *ps = node->src + i;
       memcpy(ps->swizzle, ns->swizzle, sizeof(ps->swizzle));
-      ppir_node_add_src(block->comp, &node->node, ps, &ns->src);
+      ppir_node_add_src(block->comp, &node->node, ps, &ns->src, src_mask);
 
       ps->absolute = ns->abs;
       ps->negate = ns->negate;
@@ -223,9 +232,11 @@ static ppir_node *ppir_emit_intrinsic(ppir_block *block, nir_instr *ni)
 
       snode->index = nir_intrinsic_base(instr);
 
-      for (int i = 0; i < 4; i++)
+      for (int i = 0; i < instr->num_components; i++)
          snode->src.swizzle[i] = i;
-      ppir_node_add_src(block->comp, &snode->node, &snode->src, instr->src);
+
+      ppir_node_add_src(block->comp, &snode->node, &snode->src, instr->src,
+                        u_bit_consecutive(0, instr->num_components));
 
       return &snode->node;
 
@@ -292,7 +303,8 @@ static ppir_node *ppir_emit_tex(ppir_block *block, nir_instr *ni)
    for (int i = 0; i < instr->num_srcs; i++) {
       switch (instr->src[i].src_type) {
       case nir_tex_src_coord:
-         ppir_node_add_src(block->comp, &node->node, &node->src_coords, &instr->src[i].src);
+         ppir_node_add_src(block->comp, &node->node, &node->src_coords, &instr->src[i].src,
+                           u_bit_consecutive(0, instr->coord_components));
          break;
       default:
          ppir_debug("unknown texture source");
