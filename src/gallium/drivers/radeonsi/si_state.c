@@ -1846,7 +1846,6 @@ static uint32_t si_translate_texformat(struct pipe_screen *screen,
 	}
 
 out_unknown:
-	/* R600_ERR("Unable to handle texformat %d %s\n", format, util_format_name(format)); */
 	return ~0;
 }
 

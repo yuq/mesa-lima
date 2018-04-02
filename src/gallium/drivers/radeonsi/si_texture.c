@@ -1401,7 +1401,7 @@ si_choose_tiling(struct si_screen *sscreen,
 		if (sscreen->debug_flags & DBG(NO_TILING))
 			return RADEON_SURF_MODE_LINEAR_ALIGNED;
 
-		/* Tiling doesn't work with the 422 (SUBSAMPLED) formats on R600+. */
+		/* Tiling doesn't work with the 422 (SUBSAMPLED) formats. */
 		if (desc->layout == UTIL_FORMAT_LAYOUT_SUBSAMPLED)
 			return RADEON_SURF_MODE_LINEAR_ALIGNED;
 
