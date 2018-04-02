@@ -2631,6 +2631,7 @@ static LLVMValueRef visit_var_atomic(struct ac_nir_context *ctx,
 						LLVMAtomicOrderingSequentiallyConsistent,
 						LLVMAtomicOrderingSequentiallyConsistent,
 						false);
+		result = LLVMBuildExtractValue(ctx->ac.builder, result, 0, "");
 	} else {
 		LLVMAtomicRMWBinOp op;
 		switch (instr->intrinsic) {
