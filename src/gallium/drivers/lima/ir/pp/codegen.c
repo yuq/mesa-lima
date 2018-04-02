@@ -30,22 +30,29 @@
 #include "codegen.h"
 #include "lima_context.h"
 
+static unsigned encode_swizzle(uint8_t *swizzle, int shift, int dest_shift)
+{
+   unsigned ret = 0;
+   for (int i = 0; i < 4; i++)
+      ret |= ((swizzle[i] + shift) & 0x3) << ((i + dest_shift) * 2);
+   return ret;
+}
+
 static void ppir_codegen_encode_varying(ppir_node *node, void *code)
 {
    ppir_codegen_field_varying *f = code;
    ppir_load_node *load = ppir_node_to_load(node);
-
    ppir_dest *dest = &load->dest;
    int index = ppir_target_get_dest_reg_index(dest);
+   int num_components = load->num_components;
 
-   f->imm.dest = index >> 2;
-   f->imm.mask = dest->write_mask << (index & 0x3);
+   if (num_components) {
+      assert(node->op == ppir_op_load_varying || node->op == ppir_op_load_coords);
 
-   if (node->op == ppir_op_load_varying ||
-       node->op == ppir_op_load_coords) {
-      int num_components = load->num_components;
+      f->imm.dest = index >> 2;
+      f->imm.mask = dest->write_mask << (index & 0x3);
+
       int alignment = num_components == 3 ? 3 : num_components - 1;
-
       f->imm.alignment = alignment;
       f->imm.offset_vector = 0xf;
 
@@ -53,6 +60,21 @@ static void ppir_codegen_encode_varying(ppir_node *node, void *code)
          f->imm.index = load->index >> 2;
       else
          f->imm.index = load->index >> alignment;
+   }
+   else {
+      assert(node->op == ppir_op_load_coords);
+
+      f->reg.dest = index >> 2;
+      f->reg.mask = dest->write_mask << (index & 0x3);
+
+      f->reg.source_type = 1;
+
+      ppir_src *src = &load->src;
+      index = ppir_target_get_src_reg_index(src);
+      f->reg.source = index >> 2;
+      f->reg.negate = src->negate;
+      f->reg.absolute = src->absolute;
+      f->reg.swizzle = encode_swizzle(src->swizzle, index & 0x3, 0);
    }
 }
 
@@ -88,14 +110,6 @@ static unsigned shift_to_op(int shift)
 {
    assert(shift >= -3 && shift <= 3);
    return shift < 0 ? shift + 8 : shift;
-}
-
-static unsigned encode_swizzle(uint8_t *swizzle, int shift, int dest_shift)
-{
-   unsigned ret = 0;
-   for (int i = 0; i < 4; i++)
-      ret |= ((swizzle[i] + shift) & 0x3) << ((i + dest_shift) * 2);
-   return ret;
 }
 
 static void ppir_codegen_encode_vec_mul(ppir_node *node, void *code)
