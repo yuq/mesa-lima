@@ -137,14 +137,12 @@ ir3_instr_depth(struct ir3_instruction *instr, unsigned boost, bool falsedep)
 {
 	struct ir3_instruction *src;
 
-	/* if we've already visited this instruction, bail now: */
-	if (falsedep) {
-		/* don't mark falsedep's as used, but process them normally: */
-		if (instr->flags & IR3_INSTR_MARK)
-			return;
-	} else if (ir3_instr_check_mark(instr)) {
+	/* don't mark falsedep's as used, but otherwise process them normally: */
+	if (!falsedep)
+		instr->flags &= ~IR3_INSTR_UNUSED;
+
+	if (ir3_instr_check_mark(instr))
 		return;
-	}
 
 	instr->depth = 0;
 
@@ -175,14 +173,9 @@ remove_unused_by_block(struct ir3_block *block)
 {
 	bool progress = false;
 	list_for_each_entry_safe (struct ir3_instruction, instr, &block->instr_list, node) {
-		if (!ir3_instr_check_mark(instr)) {
-			if (instr->opc == OPC_END)
-				continue;
-			/* mark it, in case it is input, so we can
-			 * remove unused inputs:
-			 */
-			instr->flags |= IR3_INSTR_UNUSED;
-			/* and remove from instruction list: */
+		if (instr->opc == OPC_END)
+			continue;
+		if (instr->flags & IR3_INSTR_UNUSED) {
 			list_delinit(&instr->node);
 			progress = true;
 		}
@@ -197,6 +190,16 @@ compute_depth_and_remove_unused(struct ir3 *ir)
 	bool progress = false;
 
 	ir3_clear_mark(ir);
+
+	/* initially mark everything as unused, we'll clear the flag as we
+	 * visit the instructions:
+	 */
+	list_for_each_entry (struct ir3_block, block, &ir->block_list, node) {
+		list_for_each_entry (struct ir3_instruction, instr, &block->instr_list, node) {
+			instr->flags |= IR3_INSTR_UNUSED;
+		}
+	}
+
 	for (i = 0; i < ir->noutputs; i++)
 		if (ir->outputs[i])
 			ir3_instr_depth(ir->outputs[i], 0, false);
@@ -220,7 +223,7 @@ compute_depth_and_remove_unused(struct ir3 *ir)
 	 */
 	for (i = 0; i < ir->indirects_count; i++) {
 		struct ir3_instruction *instr = ir->indirects[i];
-		if (instr->flags & IR3_INSTR_UNUSED)
+		if (instr && (instr->flags & IR3_INSTR_UNUSED))
 			ir->indirects[i] = NULL;
 	}
 

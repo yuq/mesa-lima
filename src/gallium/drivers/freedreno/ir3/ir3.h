@@ -762,7 +762,6 @@ static inline bool writes_pred(struct ir3_instruction *instr)
 static inline struct ir3_instruction *ssa(struct ir3_register *reg)
 {
 	if (reg->flags & (IR3_REG_SSA | IR3_REG_ARRAY)) {
-		debug_assert(!(reg->instr && (reg->instr->flags & IR3_INSTR_UNUSED)));
 		return reg->instr;
 	}
 	return NULL;
