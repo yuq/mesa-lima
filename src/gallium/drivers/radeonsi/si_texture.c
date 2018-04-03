@@ -39,7 +39,7 @@
 
 static enum radeon_surf_mode
 si_choose_tiling(struct si_screen *sscreen,
-		 const struct pipe_resource *templ);
+		 const struct pipe_resource *templ, bool tc_compatible_htile);
 
 
 bool si_prepare_for_dma_blit(struct si_context *sctx,
@@ -510,7 +510,7 @@ static void si_reallocate_texture_inplace(struct si_context *sctx,
 			return;
 
 		/* This fails with MSAA, depth, and compressed textures. */
-		if (si_choose_tiling(sctx->screen, &templ) !=
+		if (si_choose_tiling(sctx->screen, &templ, false) !=
 		    RADEON_SURF_MODE_LINEAR_ALIGNED)
 			return;
 	}
@@ -1369,7 +1369,7 @@ si_texture_create_object(struct pipe_screen *screen,
 
 static enum radeon_surf_mode
 si_choose_tiling(struct si_screen *sscreen,
-		   const struct pipe_resource *templ)
+		 const struct pipe_resource *templ, bool tc_compatible_htile)
 {
 	const struct util_format_description *desc = util_format_description(templ->format);
 	bool force_tiling = templ->flags & SI_RESOURCE_FLAG_FORCE_TILING;
@@ -1387,9 +1387,7 @@ si_choose_tiling(struct si_screen *sscreen,
 	/* Avoid Z/S decompress blits by forcing TC-compatible HTILE on VI,
 	 * which requires 2D tiling.
 	 */
-	if (sscreen->info.chip_class == VI &&
-	    is_depth_stencil &&
-	    (templ->flags & PIPE_RESOURCE_FLAG_TEXTURING_MORE_LIKELY))
+	if (sscreen->info.chip_class == VI && tc_compatible_htile)
 		return RADEON_SURF_MODE_2D;
 
 	/* Handle common candidates for the linear mode.
@@ -1453,9 +1451,9 @@ struct pipe_resource *si_texture_create(struct pipe_screen *screen,
 	int r;
 
 	r = si_init_surface(sscreen, &surface, templ,
-			      si_choose_tiling(sscreen, templ), 0, 0,
-			      false, false, is_flushed_depth,
-			      tc_compatible_htile);
+			    si_choose_tiling(sscreen, templ, tc_compatible_htile),
+			    0, 0, false, false, is_flushed_depth,
+			    tc_compatible_htile);
 	if (r) {
 		return NULL;
 	}
