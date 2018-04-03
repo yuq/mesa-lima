@@ -801,22 +801,22 @@ void si_decompress_textures(struct si_context *sctx, unsigned shader_mask)
 			si_decompress_resident_textures(sctx);
 		if (sctx->uses_bindless_images)
 			si_decompress_resident_images(sctx);
+
+		if (sctx->ps_uses_fbfetch) {
+			struct pipe_surface *cb0 = sctx->framebuffer.state.cbufs[0];
+			si_decompress_color_texture(sctx,
+						    (struct r600_texture*)cb0->texture,
+						    cb0->u.tex.first_layer,
+						    cb0->u.tex.last_layer);
+		}
+
+		si_check_render_feedback(sctx);
 	} else if (shader_mask & (1 << PIPE_SHADER_COMPUTE)) {
 		if (sctx->cs_shader_state.program->uses_bindless_samplers)
 			si_decompress_resident_textures(sctx);
 		if (sctx->cs_shader_state.program->uses_bindless_images)
 			si_decompress_resident_images(sctx);
 	}
-
-	if (sctx->ps_uses_fbfetch) {
-		struct pipe_surface *cb0 = sctx->framebuffer.state.cbufs[0];
-		si_decompress_color_texture(sctx,
-					    (struct r600_texture*)cb0->texture,
-					    cb0->u.tex.first_layer,
-					    cb0->u.tex.last_layer);
-	}
-
-	si_check_render_feedback(sctx);
 }
 
 /* Helper for decompressing a portion of a color or depth resource before
