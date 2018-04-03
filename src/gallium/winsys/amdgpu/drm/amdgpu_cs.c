@@ -33,6 +33,10 @@
 
 #include "amd/common/sid.h"
 
+#ifndef AMDGPU_IB_FLAG_TC_WB_NOT_INVALIDATE
+#define AMDGPU_IB_FLAG_TC_WB_NOT_INVALIDATE (1 << 3)
+#endif
+
 DEBUG_GET_ONCE_BOOL_OPTION(noop, "RADEON_NOOP", false)
 
 /* FENCES */
@@ -808,7 +812,8 @@ static void amdgpu_ib_finalize(struct amdgpu_winsys *ws, struct amdgpu_ib *ib)
    ib->max_ib_size = MAX2(ib->max_ib_size, ib->base.prev_dw + ib->base.current.cdw);
 }
 
-static bool amdgpu_init_cs_context(struct amdgpu_cs_context *cs,
+static bool amdgpu_init_cs_context(struct amdgpu_winsys *ws,
+                                   struct amdgpu_cs_context *cs,
                                    enum ring_type ring_type)
 {
    switch (ring_type) {
@@ -828,22 +833,33 @@ static bool amdgpu_init_cs_context(struct amdgpu_cs_context *cs,
       cs->ib[IB_MAIN].ip_type = AMDGPU_HW_IP_VCE;
       break;
 
-   case RING_COMPUTE:
-      cs->ib[IB_MAIN].ip_type = AMDGPU_HW_IP_COMPUTE;
-      break;
-
    case RING_VCN_DEC:
       cs->ib[IB_MAIN].ip_type = AMDGPU_HW_IP_VCN_DEC;
       break;
 
-  case RING_VCN_ENC:
+   case RING_VCN_ENC:
       cs->ib[IB_MAIN].ip_type = AMDGPU_HW_IP_VCN_ENC;
       break;
 
-   default:
+   case RING_COMPUTE:
    case RING_GFX:
-      cs->ib[IB_MAIN].ip_type = AMDGPU_HW_IP_GFX;
+      cs->ib[IB_MAIN].ip_type = ring_type == RING_GFX ? AMDGPU_HW_IP_GFX :
+                                                        AMDGPU_HW_IP_COMPUTE;
+
+      /* The kernel shouldn't invalidate L2 and vL1. The proper place for cache
+       * invalidation is the beginning of IBs (the previous commit does that),
+       * because completion of an IB doesn't care about the state of GPU caches,
+       * but the beginning of an IB does. Draw calls from multiple IBs can be
+       * executed in parallel, so draw calls from the current IB can finish after
+       * the next IB starts drawing, and so the cache flush at the end of IB
+       * is always late.
+       */
+      if (ws->info.drm_minor >= 26)
+         cs->ib[IB_MAIN].flags = AMDGPU_IB_FLAG_TC_WB_NOT_INVALIDATE;
       break;
+
+   default:
+      assert(0);
    }
 
    memset(cs->buffer_indices_hashlist, -1, sizeof(cs->buffer_indices_hashlist));
@@ -925,12 +941,12 @@ amdgpu_cs_create(struct radeon_winsys_ctx *rwctx,
 
    cs->main.ib_type = IB_MAIN;
 
-   if (!amdgpu_init_cs_context(&cs->csc1, ring_type)) {
+   if (!amdgpu_init_cs_context(ctx->ws, &cs->csc1, ring_type)) {
       FREE(cs);
       return NULL;
    }
 
-   if (!amdgpu_init_cs_context(&cs->csc2, ring_type)) {
+   if (!amdgpu_init_cs_context(ctx->ws, &cs->csc2, ring_type)) {
       amdgpu_destroy_cs_context(&cs->csc1);
       FREE(cs);
       return NULL;
