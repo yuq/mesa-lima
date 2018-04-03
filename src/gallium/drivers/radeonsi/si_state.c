@@ -1612,7 +1612,13 @@ static uint32_t si_translate_texformat(struct pipe_screen *screen,
 			 * gathers in stencil sampling. This affects at least
 			 * GL45-CTS.texture_cube_map_array.sampling on VI.
 			 */
-			return V_008F14_IMG_DATA_FORMAT_8_8_8_8;
+			if (sscreen->info.chip_class <= VI)
+				return V_008F14_IMG_DATA_FORMAT_8_8_8_8;
+
+			if (format == PIPE_FORMAT_X24S8_UINT)
+				return V_008F14_IMG_DATA_FORMAT_8_24;
+			else
+				return V_008F14_IMG_DATA_FORMAT_24_8;
 		case PIPE_FORMAT_Z24X8_UNORM:
 		case PIPE_FORMAT_Z24_UNORM_S8_UINT:
 			return V_008F14_IMG_DATA_FORMAT_8_24;
@@ -3567,7 +3573,10 @@ si_make_texture_descriptor(struct si_screen *screen,
 			 * fix texture gathers. This affects at least
 			 * GL45-CTS.texture_cube_map_array.sampling on VI.
 			 */
-			util_format_compose_swizzles(swizzle_wwww, state_swizzle, swizzle);
+			if (screen->info.chip_class <= VI)
+				util_format_compose_swizzles(swizzle_wwww, state_swizzle, swizzle);
+			else
+				util_format_compose_swizzles(swizzle_yyyy, state_swizzle, swizzle);
 			break;
 		default:
 			util_format_compose_swizzles(swizzle_xxxx, state_swizzle, swizzle);
