@@ -1442,6 +1442,13 @@ struct pipe_resource *si_texture_create(struct pipe_screen *screen,
 	bool is_flushed_depth = templ->flags & SI_RESOURCE_FLAG_FLUSHED_DEPTH;
 	bool tc_compatible_htile =
 		sscreen->info.chip_class >= VI &&
+		/* There are issues with TC-compatible HTILE on Tonga (and
+		 * Iceland is the same design), and documented bug workarounds
+		 * don't help. For example, this fails:
+		 *   piglit/bin/tex-miplevel-selection 'texture()' 2DShadow -auto
+		 */
+		sscreen->info.family != CHIP_TONGA &&
+		sscreen->info.family != CHIP_ICELAND &&
 		(templ->flags & PIPE_RESOURCE_FLAG_TEXTURING_MORE_LIKELY) &&
 		!(sscreen->debug_flags & DBG(NO_HYPERZ)) &&
 		!is_flushed_depth &&
