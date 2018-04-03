@@ -330,7 +330,7 @@ lima_pack_plbu_cmd(struct lima_context *ctx, const struct pipe_draw_info *info)
       plbu_cmd[i++] = fb->block_w;
       plbu_cmd[i++] = 0x30000000; /* PLBU_BLOCK_STRIDE */
 
-      plbu_cmd[i++] = ctx->plb_gp_stream->va + ctx->plb_index * LIMA_CTX_PLB_GP_SIZE;
+      plbu_cmd[i++] = ctx->plb_gp_stream->va + ctx->plb_index * ctx->plb_gp_size;
       plbu_cmd[i++] = 0x28000000 | (fb->block_w * fb->block_h - 1); /* PLBU_ARRAY_ADDRESS */
 
       plbu_cmd[i++] = fui(ctx->viewport.x);
@@ -859,9 +859,9 @@ lima_update_submit_bo(struct lima_context *ctx)
       lima_submit_add_bo(ctx->gp_submit, screen->gp_buffer, LIMA_SUBMIT_BO_READ);
 
       lima_dump_command_stream_print(
-         ctx->plb_gp_stream->map + ctx->plb_index * LIMA_CTX_PLB_GP_SIZE,
-         LIMA_CTX_PLB_GP_SIZE, false, "gp plb stream at va %x\n",
-         ctx->plb_gp_stream->va + ctx->plb_index * LIMA_CTX_PLB_GP_SIZE);
+         ctx->plb_gp_stream->map + ctx->plb_index * ctx->plb_gp_size,
+         ctx->plb_gp_size, false, "gp plb stream at va %x\n",
+         ctx->plb_gp_stream->va + ctx->plb_index * ctx->plb_gp_size);
 
       struct lima_ctx_plb_pp_stream_key key = {
          .plb_index = ctx->plb_index,
@@ -1010,7 +1010,7 @@ lima_flush(struct lima_context *ctx)
          lima_bo_update(ctx->plb[ctx->plb_index], true, false);
          uint32_t *plb = ctx->plb[ctx->plb_index]->map;
          lima_dump_command_stream_print(
-            plb, LIMA_CTX_PLB_SIZE, false, "plb dump at va %x\n",
+            plb, LIMA_CTX_PLB_BLK_SIZE, false, "plb dump at va %x\n",
             ctx->plb[ctx->plb_index]->va);
       }
       else

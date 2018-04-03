@@ -197,10 +197,10 @@ struct lima_context {
    #define LIMA_CTX_PLB_MIN_NUM  1
    #define LIMA_CTX_PLB_MAX_NUM  4
    #define LIMA_CTX_PLB_DEF_NUM  2
-   #define LIMA_CTX_PLB_MAX_BLK  512
    #define LIMA_CTX_PLB_BLK_SIZE 512
-   #define LIMA_CTX_PLB_SIZE     (LIMA_CTX_PLB_MAX_BLK * LIMA_CTX_PLB_BLK_SIZE)
-   #define LIMA_CTX_PLB_GP_SIZE  (LIMA_CTX_PLB_MAX_BLK * 4)
+   unsigned plb_max_blk;
+   unsigned plb_size;
+   unsigned plb_gp_size;
 
    struct lima_bo *plb[LIMA_CTX_PLB_MAX_NUM];
    struct lima_bo *plb_gp_stream;
