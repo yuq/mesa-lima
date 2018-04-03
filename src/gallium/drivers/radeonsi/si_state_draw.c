@@ -1429,28 +1429,22 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 				      SI_CONTEXT_CS_PARTIAL_FLUSH))) {
 		/* If we have to wait for idle, set all states first, so that all
 		 * SET packets are processed in parallel with previous draw calls.
-		 * Then upload descriptors, set shader pointers, and draw, and
-		 * prefetch at the end. This ensures that the time the CUs
-		 * are idle is very short. (there are only SET_SH packets between
-		 * the wait and the draw)
+		 * Then draw and prefetch at the end. This ensures that the time
+		 * the CUs are idle is very short.
 		 */
-		struct r600_atom *shader_pointers = &sctx->shader_pointers.atom;
-		unsigned masked_atoms = 1u << shader_pointers->id;
+		unsigned masked_atoms = 0;
 
 		if (unlikely(sctx->flags & SI_CONTEXT_FLUSH_FOR_RENDER_COND))
 			masked_atoms |= 1u << sctx->render_cond_atom.id;
 
-		/* Emit all states except shader pointers and render condition. */
-		si_emit_all_states(sctx, info, masked_atoms);
-		si_emit_cache_flush(sctx);
-
-		/* <-- CUs are idle here. */
 		if (!si_upload_graphics_shader_descriptors(sctx))
 			return;
 
-		/* Set shader pointers after descriptors are uploaded. */
-		if (si_is_atom_dirty(sctx, shader_pointers))
-			shader_pointers->emit(sctx, NULL);
+		/* Emit all states except possibly render condition. */
+		si_emit_all_states(sctx, info, masked_atoms);
+		si_emit_cache_flush(sctx);
+		/* <-- CUs are idle here. */
+
 		if (si_is_atom_dirty(sctx, &sctx->render_cond_atom))
 			sctx->render_cond_atom.emit(sctx, NULL);
 		sctx->dirty_atoms = 0;
