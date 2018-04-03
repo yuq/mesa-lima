@@ -911,7 +911,7 @@ void si_copy_buffer(struct si_context *sctx,
 		    unsigned user_flags);
 void cik_prefetch_TC_L2_async(struct si_context *sctx, struct pipe_resource *buf,
 			      uint64_t offset, unsigned size);
-void cik_emit_prefetch_L2(struct si_context *sctx);
+void cik_emit_prefetch_L2(struct si_context *sctx, bool vertex_stage_only);
 void si_init_cp_dma_functions(struct si_context *sctx);
 
 /* si_debug.c */

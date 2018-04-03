@@ -1456,7 +1456,7 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 		 * in parallel, but starting the draw first is more important.
 		 */
 		if (sctx->chip_class >= CIK && sctx->prefetch_L2_mask)
-			cik_emit_prefetch_L2(sctx);
+			cik_emit_prefetch_L2(sctx, false);
 	} else {
 		/* If we don't wait for idle, start prefetches first, then set
 		 * states, and draw at the end.
@@ -1464,14 +1464,20 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 		if (sctx->flags)
 			si_emit_cache_flush(sctx);
 
+		/* Only prefetch the API VS and VBO descriptors. */
 		if (sctx->chip_class >= CIK && sctx->prefetch_L2_mask)
-			cik_emit_prefetch_L2(sctx);
+			cik_emit_prefetch_L2(sctx, true);
 
 		if (!si_upload_graphics_shader_descriptors(sctx))
 			return;
 
 		si_emit_all_states(sctx, info, 0);
 		si_emit_draw_packets(sctx, info, indexbuf, index_size, index_offset);
+
+		/* Prefetch the remaining shaders after the draw has been
+		 * started. */
+		if (sctx->chip_class >= CIK && sctx->prefetch_L2_mask)
+			cik_emit_prefetch_L2(sctx, false);
 	}
 
 	if (unlikely(sctx->current_saved_cs)) {
