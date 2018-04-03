@@ -62,8 +62,7 @@ lima_set_framebuffer_state(struct pipe_context *pctx,
       fb->tiled_w = width;
       fb->tiled_h = height;
 
-      /* max 512, not sure if set to 512 will affect performance */
-      int limit = 500;
+      int limit = LIMA_CTX_PLB_MAX_BLK;
       while ((width * height) > limit) {
          if (width >= height) {
             width = (width + 1) >> 1;
