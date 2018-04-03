@@ -293,6 +293,7 @@ brw_regs_negative_equal(const struct brw_reg *a, const struct brw_reg *b)
       case BRW_REGISTER_TYPE_UB:
       case BRW_REGISTER_TYPE_B:
       case BRW_REGISTER_TYPE_NF:
+      default:
          unreachable("not reached");
       }
    } else {
