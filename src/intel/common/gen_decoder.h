@@ -73,7 +73,8 @@ struct gen_field_iterator {
    const uint32_t *p;
    int p_bit; /**< bit offset into p */
    const uint32_t *p_end;
-   int bit; /**< current field starts at this bit offset into p */
+   int start_bit; /**< current field starts at this bit offset into p */
+   int end_bit; /**< current field ends at this bit offset into p */
 
    int group_iter;
 
