@@ -974,6 +974,10 @@
     <field name="DWord Length" start="0" end="5" type="uint" default="1"/>
     <field name="Register Offset" start="34" end="63" type="offset"/>
     <field name="Data DWord" start="64" end="95" type="uint"/>
+    <group count="0" start="96" size="64">
+      <field name="Register Offset" start="2" end="31" type="offset"/>
+      <field name="Data DWord" start="32" end="63" type="uint"/>
+    </group>
   </instruction>
 
   <instruction name="MI_STORE_DATA_IMM" bias="2" length="5">
