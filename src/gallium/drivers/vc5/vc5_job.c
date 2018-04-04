@@ -422,15 +422,6 @@ vc5_job_submit(struct vc5_context *vc5, struct vc5_job *job)
                 }
         }
 
-        if (vc5->last_emit_seqno - vc5->screen->finished_seqno > 5) {
-                if (!vc5_wait_seqno(vc5->screen,
-                                    vc5->last_emit_seqno - 5,
-                                    PIPE_TIMEOUT_INFINITE,
-                                    "job throttling")) {
-                        fprintf(stderr, "Job throttling failed\n");
-                }
-        }
-
 done:
         vc5_job_free(vc5, job);
 }
