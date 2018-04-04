@@ -103,7 +103,7 @@ v3dX(simulator_get_param_ioctl)(struct v3d_hw *v3d,
                                 struct drm_vc5_get_param *args)
 {
         static const uint32_t reg_map[] = {
-                [DRM_VC5_PARAM_V3D_HUB_UIFCFG] = V3D_HUB_CTL_UIFCFG,
+                [DRM_VC5_PARAM_V3D_UIFCFG] = V3D_HUB_CTL_UIFCFG,
                 [DRM_VC5_PARAM_V3D_HUB_IDENT1] = V3D_HUB_CTL_IDENT1,
                 [DRM_VC5_PARAM_V3D_HUB_IDENT2] = V3D_HUB_CTL_IDENT2,
                 [DRM_VC5_PARAM_V3D_HUB_IDENT3] = V3D_HUB_CTL_IDENT3,

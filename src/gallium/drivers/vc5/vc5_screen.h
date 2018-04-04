@@ -98,7 +98,4 @@ struct pipe_screen *vc5_screen_create(int fd);
 void
 vc5_fence_init(struct vc5_screen *screen);
 
-struct vc5_fence *
-vc5_fence_create(struct vc5_screen *screen, uint64_t seqno);
-
 #endif /* VC5_SCREEN_H */

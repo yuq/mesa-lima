@@ -389,6 +389,7 @@ vc5_job_submit(struct vc5_context *vc5, struct vc5_job *job)
                         v3d33_bcl_epilogue(vc5, job);
         }
 
+        job->submit.out_sync = vc5->out_sync;
         job->submit.bcl_end = job->bcl.bo->offset + cl_offset(&job->bcl);
         job->submit.rcl_end = job->rcl.bo->offset + cl_offset(&job->rcl);
 
