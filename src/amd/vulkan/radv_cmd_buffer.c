@@ -621,16 +621,6 @@ radv_update_multisample_state(struct radv_cmd_buffer *cmd_buffer,
 	}
 }
 
-
-
-static inline void
-radv_emit_prefetch_TC_L2_async(struct radv_cmd_buffer *cmd_buffer, uint64_t va,
-			       unsigned size)
-{
-	if (cmd_buffer->device->physical_device->rad_info.chip_class >= CIK)
-		si_cp_dma_prefetch(cmd_buffer, va, size);
-}
-
 static void
 radv_emit_shader_prefetch(struct radv_cmd_buffer *cmd_buffer,
 			  struct radv_shader_variant *shader)
@@ -645,22 +635,24 @@ radv_emit_shader_prefetch(struct radv_cmd_buffer *cmd_buffer,
 	va = radv_buffer_get_va(shader->bo) + shader->bo_offset;
 
 	radv_cs_add_buffer(ws, cs, shader->bo, 8);
-	radv_emit_prefetch_TC_L2_async(cmd_buffer, va, shader->code_size);
+	si_cp_dma_prefetch(cmd_buffer, va, shader->code_size);
 }
 
 static void
-radv_emit_prefetch(struct radv_cmd_buffer *cmd_buffer,
-		   struct radv_pipeline *pipeline)
+radv_emit_prefetch_L2(struct radv_cmd_buffer *cmd_buffer,
+		      struct radv_pipeline *pipeline)
 {
 	struct radv_cmd_state *state = &cmd_buffer->state;
+
+	if (cmd_buffer->device->physical_device->rad_info.chip_class < CIK)
+		return;
 
 	if (state->prefetch_L2_mask & RADV_PREFETCH_VS)
 		radv_emit_shader_prefetch(cmd_buffer,
 					  pipeline->shaders[MESA_SHADER_VERTEX]);
 
 	if (state->prefetch_L2_mask & RADV_PREFETCH_VBO_DESCRIPTORS)
-		radv_emit_prefetch_TC_L2_async(cmd_buffer, state->vb_va,
-					       state->vb_size);
+		si_cp_dma_prefetch(cmd_buffer, state->vb_va, state->vb_size);
 
 	if (state->prefetch_L2_mask & RADV_PREFETCH_TCS)
 		radv_emit_shader_prefetch(cmd_buffer,
@@ -3077,8 +3069,8 @@ radv_draw(struct radv_cmd_buffer *cmd_buffer,
 		 * important.
 		 */
 		if (cmd_buffer->state.prefetch_L2_mask) {
-			radv_emit_prefetch(cmd_buffer,
-					   cmd_buffer->state.pipeline);
+			radv_emit_prefetch_L2(cmd_buffer,
+					      cmd_buffer->state.pipeline);
 		}
 	} else {
 		/* If we don't wait for idle, start prefetches first, then set
@@ -3087,8 +3079,8 @@ radv_draw(struct radv_cmd_buffer *cmd_buffer,
 		si_emit_cache_flush(cmd_buffer);
 
 		if (cmd_buffer->state.prefetch_L2_mask) {
-			radv_emit_prefetch(cmd_buffer,
-					   cmd_buffer->state.pipeline);
+			radv_emit_prefetch_L2(cmd_buffer,
+					      cmd_buffer->state.pipeline);
 		}
 
 		if (!radv_upload_graphics_shader_descriptors(cmd_buffer, pipeline_is_dirty))
