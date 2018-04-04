@@ -2016,7 +2016,8 @@ static LLVMValueRef load_sample_position(struct ac_shader_abi *abi, LLVMValueRef
 
 static LLVMValueRef load_sample_mask_in(struct ac_shader_abi *abi)
 {
-	return abi->sample_coverage;
+	struct si_shader_context *ctx = si_shader_context_from_abi(abi);
+	return ac_to_integer(&ctx->ac, abi->sample_coverage);
 }
 
 static LLVMValueRef si_load_tess_coord(struct ac_shader_abi *abi)
