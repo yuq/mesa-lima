@@ -61,13 +61,6 @@ struct vc5_screen {
 
         const char *name;
 
-        /** The last seqno we've completed a wait for.
-         *
-         * This lets us slightly optimize our waits by skipping wait syscalls
-         * if we know the job's already done.
-         */
-        uint64_t finished_seqno;
-
         struct slab_parent_pool transfer_pool;
 
         struct vc5_bo_cache {

@@ -469,9 +469,6 @@ bool
 vc5_wait_seqno(struct vc5_screen *screen, uint64_t seqno, uint64_t timeout_ns,
                const char *reason)
 {
-        if (screen->finished_seqno >= seqno)
-                return true;
-
         if (unlikely(V3D_DEBUG & V3D_DEBUG_PERF) && timeout_ns && reason) {
                 if (vc5_wait_seqno_ioctl(screen->fd, seqno, 0) == -ETIME) {
                         fprintf(stderr, "Blocking on seqno %lld for %s\n",
@@ -489,7 +486,6 @@ vc5_wait_seqno(struct vc5_screen *screen, uint64_t seqno, uint64_t timeout_ns,
                 return false;
         }
 
-        screen->finished_seqno = seqno;
         return true;
 }
 
