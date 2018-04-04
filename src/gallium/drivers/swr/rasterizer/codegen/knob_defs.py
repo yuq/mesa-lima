@@ -193,6 +193,41 @@ KNOBS = [
         'category'  : 'debug_adv',
     }],
 
+    ['JIT_OPTIMIZATION_LEVEL', {
+        'type'      : 'int',
+        'default'   : '-1',
+        'desc'      : ['JIT compile optimization level:',],
+        'category'  : 'debug',
+        'control'   : 'dropdown',
+        'choices' : [
+            {
+                'name'  : 'Automatic',
+                'desc'  : 'Automatic based on other KNOB and build settings',
+                'value' : -1,
+            },
+            {
+                'name'  : 'Debug',
+                'desc'  : 'No optimization: -O0',
+                'value' : 0,
+            },
+            {
+                'name'  : 'Less',
+                'desc'  : 'Some optimization: -O1',
+                'value' : 1,
+            },
+            {
+                'name'  : 'Optimize',
+                'desc'  : 'Default Clang / LLVM optimizations: -O2',
+                'value' : 2,
+            },
+            {
+                'name'  : 'Aggressive',
+                'desc'  : 'Maximum optimization: -O3',
+                'value' : 3,
+            },
+        ],
+    }],
+
     ['JIT_CACHE_DIR', {
         'type'      : 'std::string',
         'default'   : r'%TEMP%\SWR\JitCache' if sys.platform == 'win32' else '${HOME}/.swr/jitcache',

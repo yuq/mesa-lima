@@ -426,7 +426,7 @@ static SIMDINLINE bool SIMDCALL testz_ps(Float const &a, Float const &b)  // ret
                   SIMD256T::testz_ps(a.v8[1], b.v8[1]));
 }
 
-static SIMDINLINE int SIMDCALL testz_si(Integer const &a, Integer const &b)  // return all_lanes_zero(a & b) ? 1 : 0 (int)
+static SIMDINLINE bool SIMDCALL testz_si(Integer const &a, Integer const &b)  // return all_lanes_zero(a & b) ? 1 : 0 (int)
 {
     return  0 != (SIMD256T::testz_si(a.v8[0], b.v8[0]) &
                   SIMD256T::testz_si(a.v8[1], b.v8[1]));

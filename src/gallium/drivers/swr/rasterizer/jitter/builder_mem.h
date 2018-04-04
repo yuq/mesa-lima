@@ -90,7 +90,3 @@ void Shuffle16bpcGather4(const SWR_FORMAT_INFO &info, Value* vGatherInput[], Val
 // Static stack allocations for scatter operations
 Value* pScatterStackSrc{ nullptr };
 Value* pScatterStackOffsets{ nullptr };
-
-
-
-//virtual Value* TRANSLATE_ADDRESS(Value* address) { return address; }

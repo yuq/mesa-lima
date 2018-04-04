@@ -694,5 +694,4 @@ namespace SwrJit
         // Move builder to beginning of post loop
         IRB()->SetInsertPoint(pPostLoop, pPostLoop->begin());
     }
-
 }

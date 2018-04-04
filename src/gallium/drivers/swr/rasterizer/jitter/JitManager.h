@@ -147,7 +147,6 @@ struct JitManager
     llvm::FunctionType*     mFetchShaderTy;
 
     JitInstructionSet       mArch;
-    std::string             mCore;
 
     // Debugging support
     std::unordered_map<llvm::StructType*, llvm::DIType*> mDebugStructMap;

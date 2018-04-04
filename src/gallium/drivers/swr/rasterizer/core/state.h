@@ -1,5 +1,5 @@
 /****************************************************************************
-* Copyright (C) 2014-2015 Intel Corporation.   All Rights Reserved.
+* Copyright (C) 2014-2018 Intel Corporation.   All Rights Reserved.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a
 * copy of this software and associated documentation files (the "Software"),
@@ -526,6 +526,11 @@ enum SWR_AUX_MODE
     AUX_MODE_DEPTH,
 };
 
+struct SWR_LOD_OFFSETS
+{
+    uint32_t offsets[2][15];
+};
+
 //////////////////////////////////////////////////////////////////////////
 /// SWR_SURFACE_STATE
 //////////////////////////////////////////////////////////////////////////
@@ -866,11 +871,9 @@ enum SWR_MULTISAMPLE_COUNT
     SWR_MULTISAMPLE_TYPE_COUNT
 };
 
-INLINE uint32_t GetNumSamples(SWR_MULTISAMPLE_COUNT sampleCount) // @llvm_func_start
+static INLINE uint32_t GetNumSamples(/* SWR_SAMPLE_COUNT */ int sampleCountEnum) // @llvm_func_start
 {
-    static const uint32_t sampleCountLUT[SWR_MULTISAMPLE_TYPE_COUNT] {1, 2, 4, 8, 16};
-    assert(sampleCount < SWR_MULTISAMPLE_TYPE_COUNT);
-    return sampleCountLUT[sampleCount];
+    return uint32_t(1) << sampleCountEnum;
 } // @llvm_func_end
 
 struct SWR_BLEND_STATE

@@ -42,6 +42,7 @@ namespace SwrJit
     {
         mpfnTranslateGfxAddress = nullptr;
         mpParamSimDC = nullptr;
+
     }
 
     void BuilderGfxMem::NotifyPrivateContextSet()
@@ -133,9 +134,8 @@ namespace SwrJit
         return Builder::LOAD(BasePtr, offset, name);
     }
 
-    Value* BuilderGfxMem::TranlsateGfxAddress(Value* xpGfxAddress)
+    Value* BuilderGfxMem::TranslateGfxAddress(Value* xpGfxAddress)
     {
         return INT_TO_PTR(xpGfxAddress, PointerType::get(mInt8Ty, 0));
     }
-
 }

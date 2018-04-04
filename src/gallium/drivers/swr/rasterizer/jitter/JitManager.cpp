@@ -66,6 +66,7 @@ JitManager::JitManager(uint32_t simdWidth, const char *arch, const char* core)
     InitializeNativeTargetAsmPrinter();
     InitializeNativeTargetDisassembler();
 
+        
     TargetOptions    tOpts;
     tOpts.AllowFPOpFusion = FPOpFusion::Fast;
     tOpts.NoInfsFPMath = false;
@@ -73,9 +74,6 @@ JitManager::JitManager(uint32_t simdWidth, const char *arch, const char* core)
     tOpts.UnsafeFPMath = false;
 
     //tOpts.PrintMachineCode    = true;
-
-    mCore = std::string(core);
-    std::transform(mCore.begin(), mCore.end(), mCore.begin(), ::tolower);
 
     std::unique_ptr<Module> newModule(new Module("", mContext));
     mpCurrentModule = newModule.get();
@@ -92,6 +90,12 @@ JitManager::JitManager(uint32_t simdWidth, const char *arch, const char* core)
 #endif // _WIN32
 
     auto optLevel = CodeGenOpt::Aggressive;
+
+    if (KNOB_JIT_OPTIMIZATION_LEVEL >= CodeGenOpt::None &&
+        KNOB_JIT_OPTIMIZATION_LEVEL <= CodeGenOpt::Aggressive)
+    {
+        optLevel = CodeGenOpt::Level(KNOB_JIT_OPTIMIZATION_LEVEL);
+    }
 
     mpExec = EngineBuilder(std::move(newModule))
         .setTargetOptions(tOpts)
