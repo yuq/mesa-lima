@@ -1921,7 +1921,7 @@ radv_get_preamble_cs(struct radv_queue *queue,
 						       tf_va >> 8);
 				if (queue->device->physical_device->rad_info.chip_class >= GFX9) {
 					radeon_set_uconfig_reg(cs, R_030944_VGT_TF_MEMORY_BASE_HI,
-							       tf_va >> 40);
+							       S_030944_BASE_HI(tf_va >> 40));
 				}
 				radeon_set_uconfig_reg(cs, R_03093C_VGT_HS_OFFCHIP_PARAM, hs_offchip_param);
 			} else {
