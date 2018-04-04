@@ -1548,6 +1548,23 @@ cso_set_constant_buffer_resource(struct cso_context *cso,
 }
 
 void
+cso_set_constant_user_buffer(struct cso_context *cso,
+                             enum pipe_shader_type shader_stage,
+                             unsigned index, void *ptr, unsigned size)
+{
+   if (ptr) {
+      struct pipe_constant_buffer cb;
+      cb.buffer = NULL;
+      cb.buffer_offset = 0;
+      cb.buffer_size = size;
+      cb.user_buffer = ptr;
+      cso_set_constant_buffer(cso, shader_stage, index, &cb);
+   } else {
+      cso_set_constant_buffer(cso, shader_stage, index, NULL);
+   }
+}
+
+void
 cso_save_constant_buffer_slot0(struct cso_context *cso,
                                enum pipe_shader_type shader_stage)
 {
