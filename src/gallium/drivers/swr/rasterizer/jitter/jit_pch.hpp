@@ -67,6 +67,9 @@ using PassManager = llvm::legacy::PassManager;
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Scalar.h"
+#if LLVM_VERSION_MAJOR >= 7
+#include "llvm/Transforms/Utils.h"
+#endif
 #include "llvm/Support/Host.h"
 #include "llvm/Support/DynamicLibrary.h"
 
