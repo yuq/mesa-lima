@@ -1237,6 +1237,9 @@ static inline unsigned si_get_total_colormask(struct si_context *sctx)
 		return 0;
 
 	struct si_shader_selector *ps = sctx->ps_shader.cso;
+	if (!ps)
+		return 0;
+
 	unsigned colormask = sctx->framebuffer.colorbuf_enabled_4bit &
 			     sctx->queued.named.blend->cb_target_mask;
 
