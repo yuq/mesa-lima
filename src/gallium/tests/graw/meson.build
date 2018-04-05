@@ -18,8 +18,19 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-subdir('trivial')
-if with_gallium_softpipe
-  subdir('unit')
-endif
-subdir('graw')
+progs = [
+  'clear', 'disasm', 'fs-fragcoord', 'fs-frontface', 'fs-test', 'fs-write-z',
+  'gs-test', 'occlusion-query', 'quad-sample', 'quad-tex', 'shader-leak',
+  'tex-srgb', 'tex-swizzle', 'tri', 'tri-large', 'tri-gs', 'tri-instanced',
+  'vs-test',
+]
+
+foreach t : progs
+  executable(
+    'graw-' + t,
+    t + '.c',
+    include_directories : inc_common,
+    link_with : [libgraw, libgraw_util, libmesa_util, libgallium],
+    dependencies : [dep_m, dep_thread]
+  )
+endforeach

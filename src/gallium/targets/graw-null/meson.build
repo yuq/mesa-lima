@@ -18,8 +18,17 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-subdir('trivial')
-if with_gallium_softpipe
-  subdir('unit')
-endif
-subdir('graw')
+libgraw_util = static_library(
+  'graw_util',
+  ['graw_util.c'],
+  include_directories : inc_common,
+)
+
+libgraw_null = shared_library(
+  'graw_null',
+  ['graw_null.c'],
+  include_directories : inc_common,
+  link_with : [libmesa_util, libgallium],
+)
+
+libgraw = libgraw_null

@@ -192,5 +192,9 @@ if with_gallium_st_nine
   subdir('targets/d3dadapter9')
 endif
 if with_tests
+  subdir('targets/graw-null')
+  if with_glx == 'gallium-xlib'
+    subdir('targets/graw-xlib')
+  endif
   subdir('tests')
 endif
