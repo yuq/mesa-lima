@@ -65,7 +65,6 @@ static void si_emit_cp_dma(struct si_context *sctx, uint64_t dst_va,
 	struct radeon_winsys_cs *cs = sctx->gfx_cs;
 	uint32_t header = 0, command = 0;
 
-	assert(size);
 	assert(size <= cp_dma_max_byte_count(sctx));
 
 	if (sctx->chip_class >= GFX9)
@@ -126,6 +125,17 @@ static void si_emit_cp_dma(struct si_context *sctx, uint64_t dst_va,
 		radeon_emit(cs, PKT3(PKT3_PFP_SYNC_ME, 0, 0));
 		radeon_emit(cs, 0);
 	}
+}
+
+void si_cp_dma_wait_for_idle(struct si_context *sctx)
+{
+	/* Issue a dummy DMA that copies zero bytes.
+	 *
+	 * The DMA engine will see that there's no work to do and skip this
+	 * DMA request, however, the CP will see the sync flag and still wait
+	 * for all DMAs to complete.
+	 */
+	si_emit_cp_dma(sctx, 0, 0, 0, CP_DMA_SYNC, SI_COHERENCY_NONE);
 }
 
 static unsigned get_flush_flags(struct si_context *sctx, enum si_coherency coher)

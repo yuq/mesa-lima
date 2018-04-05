@@ -111,7 +111,10 @@ void si_flush_gfx_cs(struct si_context *ctx, unsigned flags,
 		ctx->flags |= SI_CONTEXT_INV_GLOBAL_L2 |
 				SI_CONTEXT_INV_VMEM_L1;
 
-	si_emit_cache_flush(ctx);
+	/* Make sure CP DMA is idle at the end of IBs after L2 prefetches
+	 * because the kernel doesn't wait for it. */
+	if (ctx->chip_class >= CIK)
+		si_cp_dma_wait_for_idle(ctx);
 
 	if (ctx->current_saved_cs) {
 		si_trace_emit(ctx);

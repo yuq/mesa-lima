@@ -902,6 +902,7 @@ enum si_coherency {
 	SI_COHERENCY_CB_META,
 };
 
+void si_cp_dma_wait_for_idle(struct si_context *sctx);
 void si_clear_buffer(struct si_context *sctx, struct pipe_resource *dst,
 		     uint64_t offset, uint64_t size, unsigned value,
 		     enum si_coherency coher);
