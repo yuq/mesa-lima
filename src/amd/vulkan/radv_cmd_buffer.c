@@ -1478,7 +1478,8 @@ radv_flush_constants(struct radv_cmd_buffer *cmd_buffer,
 }
 
 static void
-radv_cmd_buffer_update_vertex_descriptors(struct radv_cmd_buffer *cmd_buffer, bool pipeline_is_dirty)
+radv_flush_vertex_descriptors(struct radv_cmd_buffer *cmd_buffer,
+			      bool pipeline_is_dirty)
 {
 	if ((pipeline_is_dirty ||
 	    (cmd_buffer->state.dirty & RADV_CMD_DIRTY_VERTEX_BUFFER)) &&
@@ -1532,7 +1533,7 @@ radv_cmd_buffer_update_vertex_descriptors(struct radv_cmd_buffer *cmd_buffer, bo
 static void
 radv_upload_graphics_shader_descriptors(struct radv_cmd_buffer *cmd_buffer, bool pipeline_is_dirty)
 {
-	radv_cmd_buffer_update_vertex_descriptors(cmd_buffer, pipeline_is_dirty);
+	radv_flush_vertex_descriptors(cmd_buffer, pipeline_is_dirty);
 	radv_flush_descriptors(cmd_buffer, VK_SHADER_STAGE_ALL_GRAPHICS);
 	radv_flush_constants(cmd_buffer, cmd_buffer->state.pipeline,
 			     VK_SHADER_STAGE_ALL_GRAPHICS);
