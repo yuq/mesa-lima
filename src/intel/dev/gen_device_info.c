@@ -1047,7 +1047,7 @@ gen_device_info_update_from_topology(struct gen_device_info *devinfo,
    /* We expect the total number of EUs to be uniformly distributed throughout
     * the subslices.
     */
-   assert((n_eus % n_subslices) == 0);
+   assert(n_subslices && (n_eus % n_subslices) == 0);
    devinfo->num_eu_per_subslice = n_eus / n_subslices;
 }
 
