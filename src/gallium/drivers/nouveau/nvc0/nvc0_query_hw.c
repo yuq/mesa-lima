@@ -630,5 +630,5 @@ nvc0_hw_query_fifo_wait(struct nvc0_context *nvc0, struct nvc0_query *q)
       PUSH_DATA (push, hq->sequence);
    }
    PUSH_DATA (push, (1 << 12) |
-              NV84_SUBCHAN_SEMAPHORE_TRIGGER_ACQUIRE_EQUAL);
+              NV84_SUBCHAN_SEMAPHORE_TRIGGER_ACQUIRE_GEQUAL);
 }
