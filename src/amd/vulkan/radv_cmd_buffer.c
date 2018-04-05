@@ -646,9 +646,6 @@ radv_emit_prefetch_L2(struct radv_cmd_buffer *cmd_buffer,
 	struct radv_cmd_state *state = &cmd_buffer->state;
 	uint32_t mask = state->prefetch_L2_mask;
 
-	if (cmd_buffer->device->physical_device->rad_info.chip_class < CIK)
-		return;
-
 	if (vertex_stage_only) {
 		/* Fast prefetch path for starting draws as soon as possible.
 		 */
@@ -3042,6 +3039,8 @@ static void
 radv_draw(struct radv_cmd_buffer *cmd_buffer,
 	  const struct radv_draw_info *info)
 {
+	bool has_prefetch =
+		cmd_buffer->device->physical_device->rad_info.chip_class >= CIK;
 	bool pipeline_is_dirty =
 		(cmd_buffer->state.dirty & RADV_CMD_DIRTY_PIPELINE) &&
 		cmd_buffer->state.pipeline &&
@@ -3079,7 +3078,7 @@ radv_draw(struct radv_cmd_buffer *cmd_buffer,
 		 * run in parallel, but starting the draw first is more
 		 * important.
 		 */
-		if (cmd_buffer->state.prefetch_L2_mask) {
+		if (has_prefetch && cmd_buffer->state.prefetch_L2_mask) {
 			radv_emit_prefetch_L2(cmd_buffer,
 					      cmd_buffer->state.pipeline, false);
 		}
@@ -3106,7 +3105,7 @@ radv_draw(struct radv_cmd_buffer *cmd_buffer,
 		/* Prefetch the remaining shaders after the draw has been
 		 * started.
 		 */
-		if (cmd_buffer->state.prefetch_L2_mask) {
+		if (has_prefetch && cmd_buffer->state.prefetch_L2_mask) {
 			radv_emit_prefetch_L2(cmd_buffer,
 					      cmd_buffer->state.pipeline, false);
 		}
@@ -3409,6 +3408,8 @@ radv_dispatch(struct radv_cmd_buffer *cmd_buffer,
 	      const struct radv_dispatch_info *info)
 {
 	struct radv_pipeline *pipeline = cmd_buffer->state.compute_pipeline;
+	bool has_prefetch =
+		cmd_buffer->device->physical_device->rad_info.chip_class >= CIK;
 	bool pipeline_is_dirty = pipeline &&
 				 pipeline != cmd_buffer->state.emitted_compute_pipeline;
 
@@ -3436,7 +3437,7 @@ radv_dispatch(struct radv_cmd_buffer *cmd_buffer,
 		 * will run in parallel, but starting the dispatch first is
 		 * more important.
 		 */
-		if (pipeline_is_dirty) {
+		if (has_prefetch && pipeline_is_dirty) {
 			radv_emit_shader_prefetch(cmd_buffer,
 						  pipeline->shaders[MESA_SHADER_COMPUTE]);
 		}
@@ -3446,7 +3447,7 @@ radv_dispatch(struct radv_cmd_buffer *cmd_buffer,
 		 */
 		si_emit_cache_flush(cmd_buffer);
 
-		if (pipeline_is_dirty) {
+		if (has_prefetch && pipeline_is_dirty) {
 			radv_emit_shader_prefetch(cmd_buffer,
 						  pipeline->shaders[MESA_SHADER_COMPUTE]);
 		}
