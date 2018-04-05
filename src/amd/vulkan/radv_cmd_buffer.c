@@ -1438,9 +1438,11 @@ radv_flush_descriptors(struct radv_cmd_buffer *cmd_buffer,
 
 static void
 radv_flush_constants(struct radv_cmd_buffer *cmd_buffer,
-		     struct radv_pipeline *pipeline,
 		     VkShaderStageFlags stages)
 {
+	struct radv_pipeline *pipeline = stages & VK_SHADER_STAGE_COMPUTE_BIT
+					 ? cmd_buffer->state.compute_pipeline
+					 : cmd_buffer->state.pipeline;
 	struct radv_pipeline_layout *layout = pipeline->layout;
 	unsigned offset;
 	void *ptr;
@@ -1535,8 +1537,7 @@ radv_upload_graphics_shader_descriptors(struct radv_cmd_buffer *cmd_buffer, bool
 {
 	radv_flush_vertex_descriptors(cmd_buffer, pipeline_is_dirty);
 	radv_flush_descriptors(cmd_buffer, VK_SHADER_STAGE_ALL_GRAPHICS);
-	radv_flush_constants(cmd_buffer, cmd_buffer->state.pipeline,
-			     VK_SHADER_STAGE_ALL_GRAPHICS);
+	radv_flush_constants(cmd_buffer, VK_SHADER_STAGE_ALL_GRAPHICS);
 }
 
 static void
@@ -3392,8 +3393,7 @@ static void
 radv_upload_compute_shader_descriptors(struct radv_cmd_buffer *cmd_buffer)
 {
 	radv_flush_descriptors(cmd_buffer, VK_SHADER_STAGE_COMPUTE_BIT);
-	radv_flush_constants(cmd_buffer, cmd_buffer->state.compute_pipeline,
-			     VK_SHADER_STAGE_COMPUTE_BIT);
+	radv_flush_constants(cmd_buffer, VK_SHADER_STAGE_COMPUTE_BIT);
 }
 
 static void
