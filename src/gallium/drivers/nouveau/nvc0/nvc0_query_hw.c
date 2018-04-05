@@ -611,6 +611,10 @@ nvc0_hw_query_fifo_wait(struct nvc0_context *nvc0, struct nvc0_query *q)
    struct nvc0_hw_query *hq = nvc0_hw_query(q);
    unsigned offset = hq->offset;
 
+   /* ensure the query's fence has been emitted */
+   if (hq->is64bit && hq->fence->state < NOUVEAU_FENCE_STATE_EMITTED)
+      nouveau_fence_emit(hq->fence);
+
    if (q->type == PIPE_QUERY_SO_OVERFLOW_PREDICATE) offset += 0x20;
 
    PUSH_SPACE(push, 5);
