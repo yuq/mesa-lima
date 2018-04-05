@@ -645,6 +645,12 @@ bool
 st_translate_fragment_program(struct st_context *st,
                               struct st_fragment_program *stfp)
 {
+   /* We have already compiled to NIR so just return */
+   if (stfp->shader_program) {
+      st_store_ir_in_disk_cache(st, &stfp->Base, true);
+      return true;
+   }
+
    ubyte outputMapping[2 * FRAG_RESULT_MAX];
    ubyte inputMapping[VARYING_SLOT_MAX];
    ubyte inputSlotToAttr[VARYING_SLOT_MAX];
@@ -898,12 +904,6 @@ st_translate_fragment_program(struct st_context *st,
 
          fs_num_outputs++;
       }
-   }
-
-   /* We have already compiled to NIR so just return */
-   if (stfp->shader_program) {
-      st_store_ir_in_disk_cache(st, &stfp->Base, true);
-      return true;
    }
 
    ureg = ureg_create_with_screen(PIPE_SHADER_FRAGMENT, st->pipe->screen);
