@@ -5309,6 +5309,10 @@ void si_shader_apply_scratch_relocs(struct si_shader *shader,
 	}
 }
 
+/* For the UMR disassembler. */
+#define DEBUGGER_END_OF_CODE_MARKER	0xbf9f0000 /* invalid instruction */
+#define DEBUGGER_NUM_MARKERS		5
+
 static unsigned si_get_shader_binary_size(const struct si_shader *shader)
 {
 	unsigned size = shader->binary.code_size;
@@ -5321,7 +5325,7 @@ static unsigned si_get_shader_binary_size(const struct si_shader *shader)
 		size += shader->prolog2->binary.code_size;
 	if (shader->epilog)
 		size += shader->epilog->binary.code_size;
-	return size;
+	return size + DEBUGGER_NUM_MARKERS * 4;
 }
 
 int si_shader_binary_upload(struct si_screen *sscreen, struct si_shader *shader)
@@ -5380,10 +5384,18 @@ int si_shader_binary_upload(struct si_screen *sscreen, struct si_shader *shader)
 	memcpy(ptr, mainb->code, mainb->code_size);
 	ptr += mainb->code_size;
 
-	if (epilog)
+	if (epilog) {
 		memcpy(ptr, epilog->code, epilog->code_size);
-	else if (mainb->rodata_size > 0)
+		ptr += epilog->code_size;
+	} else if (mainb->rodata_size > 0) {
 		memcpy(ptr, mainb->rodata, mainb->rodata_size);
+		ptr += mainb->rodata_size;
+	}
+
+	/* Add end-of-code markers for the UMR disassembler. */
+	uint32_t *ptr32 = (uint32_t*)ptr;
+	for (unsigned i = 0; i < DEBUGGER_NUM_MARKERS; i++)
+		ptr32[i] = DEBUGGER_END_OF_CODE_MARKER;
 
 	sscreen->ws->buffer_unmap(shader->bo->buf);
 	return 0;
