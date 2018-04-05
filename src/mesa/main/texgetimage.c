@@ -953,7 +953,7 @@ dimensions_error_check(struct gl_context *ctx,
                      "%s(1D, yoffset = %d)", caller, yoffset);
          return true;
       }
-      if (height > 1) {
+      if (height != 1) {
          _mesa_error(ctx, GL_INVALID_VALUE,
                      "%s(1D, height = %d)", caller, height);
          return true;
@@ -967,7 +967,7 @@ dimensions_error_check(struct gl_context *ctx,
                      "%s(zoffset = %d)", caller, zoffset);
          return true;
       }
-      if (depth > 1) {
+      if (depth != 1) {
          _mesa_error(ctx, GL_INVALID_VALUE,
                      "%s(depth = %d)", caller, depth);
          return true;
