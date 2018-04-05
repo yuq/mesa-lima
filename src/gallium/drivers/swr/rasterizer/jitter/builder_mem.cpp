@@ -176,13 +176,6 @@ namespace SwrJit
         return VGATHERPS(vSrc, pBase, vIndices, vMask, C(scale));
     }
 
-    Value *Builder::GATHERPS_16(Value *vSrc, Value *pBase, Value *vIndices, Value *vMask, uint8_t scale, JIT_MEM_CLIENT usage)
-    {
-        AssertMemoryUsageParams(pBase, usage);
-
-        return VGATHERPS_16(vSrc, pBase, vIndices, vMask, C(scale));
-    }
-
     //////////////////////////////////////////////////////////////////////////
     /// @brief Generate a masked gather operation in LLVM IR.  If not  
     /// supported on the underlying platform, emulate it with loads
@@ -196,13 +189,6 @@ namespace SwrJit
         AssertMemoryUsageParams(pBase, usage);
 
         return VGATHERDD(vSrc, pBase, vIndices, vMask, C(scale));
-    }
-
-    Value *Builder::GATHERDD_16(Value *vSrc, Value *pBase, Value *vIndices, Value *vMask, uint8_t scale, JIT_MEM_CLIENT usage)
-    {
-        AssertMemoryUsageParams(pBase, usage);
-
-        return VGATHERDD_16(vSrc, pBase, vIndices, vMask, C(scale));
     }
 
     //////////////////////////////////////////////////////////////////////////

@@ -78,13 +78,10 @@ void Gather4(const SWR_FORMAT format, Value* pSrcBase, Value* byteOffsets,
 
 virtual Value *GATHERPS(Value *src, Value *pBase, Value *indices, Value *mask, uint8_t scale = 1, JIT_MEM_CLIENT usage = MEM_CLIENT_INTERNAL);
 
-Value *GATHERPS_16(Value *src, Value *pBase, Value *indices, Value *mask, uint8_t scale = 1, JIT_MEM_CLIENT usage = MEM_CLIENT_INTERNAL);
-
 void GATHER4PS(const SWR_FORMAT_INFO &info, Value* pSrcBase, Value* byteOffsets,
     Value* mask, Value* vGatherComponents[], bool bPackedOutput, JIT_MEM_CLIENT usage = MEM_CLIENT_INTERNAL);
 
 virtual Value *GATHERDD(Value* src, Value* pBase, Value* indices, Value* mask, uint8_t scale = 1, JIT_MEM_CLIENT usage = MEM_CLIENT_INTERNAL);
-Value *GATHERDD_16(Value *src, Value *pBase, Value *indices, Value *mask, uint8_t scale = 1, JIT_MEM_CLIENT usage = MEM_CLIENT_INTERNAL);
 
 void GATHER4DD(const SWR_FORMAT_INFO &info, Value* pSrcBase, Value* byteOffsets,
     Value* mask, Value* vGatherComponents[], bool bPackedOutput, JIT_MEM_CLIENT usage = MEM_CLIENT_INTERNAL);

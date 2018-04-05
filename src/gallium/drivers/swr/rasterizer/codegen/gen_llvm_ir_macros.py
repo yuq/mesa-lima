@@ -42,28 +42,26 @@ inst_aliases = {
 }
 
 intrinsics = [
-    ['VGATHERPD', 'x86_avx2_gather_d_pd_256', ['src', 'pBase', 'indices', 'mask', 'scale'], 'mSimd4FP64Ty'],
-    ['VGATHERPS', 'x86_avx2_gather_d_ps_256', ['src', 'pBase', 'indices', 'mask', 'scale'], 'mSimdFP32Ty'],
-    ['VGATHERPS_16', 'x86_avx512_gather_dps_512', ['src', 'pBase', 'indices', 'mask', 'scale'], 'mSimd16FP32Ty'],
-    ['VGATHERDD', 'x86_avx2_gather_d_d_256', ['src', 'pBase', 'indices', 'mask', 'scale'], 'mSimdInt32Ty'],
-    ['VGATHERDD_16', 'x86_avx512_gather_dpi_512', ['src', 'pBase', 'indices', 'mask', 'scale'], 'mSimd16Int32Ty'],
-    ['VRCPPS', 'x86_avx_rcp_ps_256', ['a'], 'mSimdFP32Ty'],
-    ['VROUND', 'x86_avx_round_ps_256', ['a', 'rounding'], 'mSimdFP32Ty'],
-    ['BEXTR_32', 'x86_bmi_bextr_32', ['src', 'control'], 'mInt32Ty'],
-    ['VPSHUFB', 'x86_avx2_pshuf_b', ['a', 'b'], 'mSimd32Int8Ty'],
-    ['VPERMD', 'x86_avx2_permd', ['a', 'idx'], 'mSimdInt32Ty'],
-    ['VPERMPS', 'x86_avx2_permps', ['idx', 'a'], 'mSimdFP32Ty'],
-    ['VCVTPD2PS', 'x86_avx_cvt_pd2_ps_256', ['a'], 'mSimdFP32Ty'],
-    ['VCVTPH2PS', 'x86_vcvtph2ps_256', ['a'], 'mSimdFP32Ty'],
-    ['VCVTPS2PH', 'x86_vcvtps2ph_256', ['a', 'round'], 'mSimdFP16Ty'],
-    ['VHSUBPS', 'x86_avx_hsub_ps_256', ['a', 'b'], 'mSimdFP32Ty'],
-    ['VPTESTC', 'x86_avx_ptestc_256', ['a', 'b'], 'mInt32Ty'],
-    ['VPTESTZ', 'x86_avx_ptestz_256', ['a', 'b'], 'mInt32Ty'],
-    ['VFMADDPS', 'x86_fma_vfmadd_ps_256', ['a', 'b', 'c'], 'mSimdFP32Ty'],
-    ['VMOVMSKPS', 'x86_avx_movmsk_ps_256', ['a'], 'mInt32Ty'],
-    ['VPHADDD', 'x86_avx2_phadd_d', ['a', 'b'], 'mSimdInt32Ty'],
-    ['PDEP32', 'x86_bmi_pdep_32', ['a', 'b'], 'mInt32Ty'],
-    ['RDTSC', 'x86_rdtsc', [], 'mInt64Ty'],
+    ['VGATHERPD',   ['src', 'pBase', 'indices', 'mask', 'scale'], 'src'],
+    ['VGATHERPS',   ['src', 'pBase', 'indices', 'mask', 'scale'], 'src'],
+    ['VGATHERDD',   ['src', 'pBase', 'indices', 'mask', 'scale'], 'src'],
+    ['VRCPPS',      ['a'], 'a'],
+    ['VROUND',      ['a', 'rounding'], 'a'],
+    ['BEXTR_32',    ['src', 'control'], 'src'],
+    ['VPSHUFB',     ['a', 'b'], 'a'],
+    ['VPERMD',      ['a', 'idx'], 'a'],
+    ['VPERMPS',     ['idx', 'a'], 'a'],
+    ['VCVTPD2PS',   ['a'], 'VectorType::get(mFP32Ty, a->getType()->getVectorNumElements())'],
+    ['VCVTPH2PS',   ['a'], 'VectorType::get(mFP32Ty, a->getType()->getVectorNumElements())'],
+    ['VCVTPS2PH',   ['a', 'round'], 'mSimdFP16Ty'],
+    ['VHSUBPS',     ['a', 'b'], 'a'],
+    ['VPTESTC',     ['a', 'b'], 'mInt32Ty'],
+    ['VPTESTZ',     ['a', 'b'], 'mInt32Ty'],
+    ['VFMADDPS',    ['a', 'b', 'c'], 'a'],
+    ['VMOVMSKPS',   ['a'], 'mInt32Ty'],
+    ['VPHADDD',     ['a', 'b'], 'a'],
+    ['PDEP32',      ['a', 'b'], 'a'],
+    ['RDTSC',       [], 'mInt64Ty'],
 ]
 
 llvm_intrinsics = [
@@ -231,19 +229,31 @@ def generate_meta_h(output_dir):
 
     functions = []
     for inst in intrinsics:
+        name = inst[0]
+        args = inst[1]
+        ret = inst[2]
+
         #print('Inst: %s, x86: %s numArgs: %d' % (inst[0], inst[1], len(inst[2])))
-        if len(inst[2]) != 0:
-            declargs = 'Value* ' + ', Value* '.join(inst[2])
-            decl = 'Value* %s(%s, const llvm::Twine& name = "")' % (inst[0], declargs)
+        if len(args) != 0:
+            declargs = 'Value* ' + ', Value* '.join(args)
+            decl = 'Value* %s(%s, const llvm::Twine& name = "")' % (name, declargs)
         else:
-            decl = 'Value* %s(const llvm::Twine& name = "")' % (inst[0])
+            decl = 'Value* %s(const llvm::Twine& name = "")' % (name)
+
+        # determine the return type of the intrinsic. It can either be:
+        # - type of one of the input arguments
+        # - snippet of code to set the return type
+        
+        if ret in args:
+            returnTy = ret + '->getType()'
+        else:
+            returnTy = ret
 
         functions.append({
             'decl'      : decl,
-            'name'      : inst[0],
-            'intrin'    : inst[1],
-            'args'      : inst[2],
-            'returnType': inst[3]
+            'name'      : name,
+            'args'      : args,
+            'returnType': returnTy
         })
 
     MakoTemplateWriter.to_file(

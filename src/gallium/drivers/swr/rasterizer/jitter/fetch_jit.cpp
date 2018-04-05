@@ -1563,10 +1563,8 @@ void FetchJit::Shuffle16bpcGather16(Shuffle16bpcArgs &args)
                     if (bFP)
                     {
                         // extract 128 bit lanes to sign extend each component
-                        /// @todo Force 8-wide cvt until we support generic cvt in x86 lowering pass
-                        Function* pCvtPh2Ps = Intrinsic::getDeclaration(JM()->mpCurrentModule, Intrinsic::x86_vcvtph2ps_256);
-                        Value *temp_lo = CALL(pCvtPh2Ps, BITCAST(VEXTRACT(selectedPermute_lo, C(lane)), v8x16Ty));
-                        Value *temp_hi = CALL(pCvtPh2Ps, BITCAST(VEXTRACT(selectedPermute_hi, C(lane)), v8x16Ty));
+                        Value *temp_lo = CVTPH2PS(BITCAST(VEXTRACT(selectedPermute_lo, C(lane)), v8x16Ty));
+                        Value *temp_hi = CVTPH2PS(BITCAST(VEXTRACT(selectedPermute_hi, C(lane)), v8x16Ty));
 
                         vVertexElements[currentVertexElement] = JOIN_16(temp_lo, temp_hi);
                     }
