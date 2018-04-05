@@ -1477,7 +1477,7 @@ radv_flush_constants(struct radv_cmd_buffer *cmd_buffer,
 	assert(cmd_buffer->cs->cdw <= cdw_max);
 }
 
-static bool
+static void
 radv_cmd_buffer_update_vertex_descriptors(struct radv_cmd_buffer *cmd_buffer, bool pipeline_is_dirty)
 {
 	if ((pipeline_is_dirty ||
@@ -1494,7 +1494,7 @@ radv_cmd_buffer_update_vertex_descriptors(struct radv_cmd_buffer *cmd_buffer, bo
 		/* allocate some descriptor state for vertex buffers */
 		if (!radv_cmd_buffer_upload_alloc(cmd_buffer, count * 16, 256,
 						  &vb_offset, &vb_ptr))
-			return false;
+			return;
 
 		for (i = 0; i < count; i++) {
 			uint32_t *desc = &((uint32_t *)vb_ptr)[i * 4];
@@ -1527,21 +1527,15 @@ radv_cmd_buffer_update_vertex_descriptors(struct radv_cmd_buffer *cmd_buffer, bo
 		cmd_buffer->state.prefetch_L2_mask |= RADV_PREFETCH_VBO_DESCRIPTORS;
 	}
 	cmd_buffer->state.dirty &= ~RADV_CMD_DIRTY_VERTEX_BUFFER;
-
-	return true;
 }
 
-static bool
+static void
 radv_upload_graphics_shader_descriptors(struct radv_cmd_buffer *cmd_buffer, bool pipeline_is_dirty)
 {
-	if (!radv_cmd_buffer_update_vertex_descriptors(cmd_buffer, pipeline_is_dirty))
-		return false;
-
+	radv_cmd_buffer_update_vertex_descriptors(cmd_buffer, pipeline_is_dirty);
 	radv_flush_descriptors(cmd_buffer, VK_SHADER_STAGE_ALL_GRAPHICS);
 	radv_flush_constants(cmd_buffer, cmd_buffer->state.pipeline,
 			     VK_SHADER_STAGE_ALL_GRAPHICS);
-
-	return true;
 }
 
 static void
@@ -3068,8 +3062,7 @@ radv_draw(struct radv_cmd_buffer *cmd_buffer,
 		si_emit_cache_flush(cmd_buffer);
 		/* <-- CUs are idle here --> */
 
-		if (!radv_upload_graphics_shader_descriptors(cmd_buffer, pipeline_is_dirty))
-			return;
+		radv_upload_graphics_shader_descriptors(cmd_buffer, pipeline_is_dirty);
 
 		radv_emit_draw_packets(cmd_buffer, info);
 		/* <-- CUs are busy here --> */
@@ -3096,8 +3089,7 @@ radv_draw(struct radv_cmd_buffer *cmd_buffer,
 					      cmd_buffer->state.pipeline, true);
 		}
 
-		if (!radv_upload_graphics_shader_descriptors(cmd_buffer, pipeline_is_dirty))
-			return;
+		radv_upload_graphics_shader_descriptors(cmd_buffer, pipeline_is_dirty);
 
 		radv_emit_all_graphics_states(cmd_buffer, info);
 		radv_emit_draw_packets(cmd_buffer, info);
