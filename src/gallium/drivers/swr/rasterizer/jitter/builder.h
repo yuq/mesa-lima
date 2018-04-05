@@ -96,6 +96,8 @@ namespace SwrJit
         Type*                mSimd32Int8Ty;
 
         void SetTargetWidth(uint32_t width);
+        void SetTempAlloca(Value* inst);
+        bool IsTempAlloca(Value* inst);
 
 #include "gen_builder.hpp"
 #include "gen_builder_meta.hpp"

@@ -111,4 +111,21 @@ namespace SwrJit
         mSimdVectorIntTy = ArrayType::get(mSimdInt32Ty, 4);
         mSimdVectorTRTy = ArrayType::get(mSimdFP32Ty, 5);
     }
+
+    /// @brief Mark this alloca as temporary to avoid hoisting later on
+    void Builder::SetTempAlloca(Value* inst)
+    {
+        AllocaInst* pAlloca = dyn_cast<AllocaInst>(inst);
+        SWR_ASSERT(pAlloca, "Unexpected non-alloca instruction");
+        MDNode* N = MDNode::get(JM()->mContext, MDString::get(JM()->mContext, "is_temp_alloca"));
+        pAlloca->setMetadata("is_temp_alloca", N);
+    }
+
+    bool Builder::IsTempAlloca(Value* inst)
+    {
+        AllocaInst* pAlloca = dyn_cast<AllocaInst>(inst);
+        SWR_ASSERT(pAlloca, "Unexpected non-alloca instruction");
+
+        return (pAlloca->getMetadata("is_temp_alloca") != nullptr);
+    }
 }

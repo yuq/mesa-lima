@@ -229,6 +229,7 @@ namespace SwrJit
 
             // store vSrc on the stack.  this way we can select between a valid load address and the vSrc address
             Value* vSrcPtr = ALLOCA(vSrc->getType());
+            SetTempAlloca(vSrcPtr);
             STORE(vSrc, vSrcPtr);
 
             vGather = UndefValue::get(VectorType::get(mDoubleTy, 4));
