@@ -176,7 +176,7 @@ struct DRAW_WORK
     };
     union
     {
-        const int32_t* pIB;        // DrawIndexed: App supplied indices
+        gfxptr_t   xpIB;              // DrawIndexed: App supplied int32 indices 
         uint32_t   startVertex;    // Draw: Starting vertex in VB to render from.
     };
     int32_t    baseVertex;

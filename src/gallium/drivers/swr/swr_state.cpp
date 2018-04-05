@@ -1375,7 +1375,7 @@ swr_update_derived(struct pipe_context *pipe,
 
          SWR_INDEX_BUFFER_STATE swrIndexBuffer;
          swrIndexBuffer.format = swr_convert_index_type(info.index_size);
-         swrIndexBuffer.pIndices = p_data;
+         swrIndexBuffer.xpIndices = (gfxptr_t) p_data;
          swrIndexBuffer.size = size;
 
          ctx->api.pfnSwrSetIndexBuffer(ctx->swrContext, &swrIndexBuffer);

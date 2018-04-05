@@ -40,6 +40,7 @@ namespace SwrJit
     BuilderGfxMem::BuilderGfxMem(JitManager* pJitMgr) :
         Builder(pJitMgr)
     {
+        mpTranslationFuncTy = nullptr;
         mpfnTranslateGfxAddress = nullptr;
         mpParamSimDC = nullptr;
 
@@ -51,8 +52,7 @@ namespace SwrJit
 
     void BuilderGfxMem::AssertGFXMemoryParams(Value* ptr, Builder::JIT_MEM_CLIENT usage)
     {
-        SWR_ASSERT(ptr->getType() == mInt64Ty, "GFX addresses must be gfxptr_t and not converted to system pointers.");
-        SWR_ASSERT(usage != MEM_CLIENT_INTERNAL, "Internal memory should not go through the translation path and should not be gfxptr_t.");
+        SWR_ASSERT(!(ptr->getType() == mInt64Ty && usage == MEM_CLIENT_INTERNAL), "Internal memory should not be gfxptr_t.");
     }
 
     //////////////////////////////////////////////////////////////////////////
@@ -106,32 +106,94 @@ namespace SwrJit
         return ADD(base, offset);
     }
     
-    LoadInst* BuilderGfxMem::LOAD(Value *Ptr, const char *Name, JIT_MEM_CLIENT usage)
+    Value *BuilderGfxMem::GEP(Value *Ptr, Value *Idx, Type *Ty, const Twine &Name)
     {
-        // the 64 bit gfx pointers are not yet propagated up the stack 
-        // so there is some casting in here and the test for type is not yet enabled
+        Ptr = TranslationHelper(Ptr, Ty);
+        return Builder::GEP(Ptr, Idx, nullptr, Name);
+    }
 
+    Value *BuilderGfxMem::GEP(Type *Ty, Value *Ptr, Value *Idx, const Twine &Name)
+    {
+        Ptr = TranslationHelper(Ptr, Ty);
+        return Builder::GEP(Ty, Ptr, Idx, Name);
+    }
+
+    Value *BuilderGfxMem::GEP(Value* Ptr, const std::initializer_list<Value*> &indexList, Type *Ty)
+    {
+        Ptr = TranslationHelper(Ptr, Ty);
+        return Builder::GEP(Ptr, indexList);
+    }
+
+    Value *BuilderGfxMem::GEP(Value* Ptr, const std::initializer_list<uint32_t> &indexList, Type *Ty)
+    {
+        Ptr = TranslationHelper(Ptr, Ty);
+        return Builder::GEP(Ptr, indexList);
+    }
+
+    Value* BuilderGfxMem::TranslationHelper(Value *Ptr, Type *Ty)
+    {
+        SWR_ASSERT(!(Ptr->getType() == mInt64Ty && Ty == nullptr), "Access of GFX pointers must have non-null type specified.");
+
+
+        // address may be coming in as 64bit int now so get the pointer
+        if (Ptr->getType() == mInt64Ty)
+        {
+            Ptr = INT_TO_PTR(Ptr, Ty);
+        }
+
+        return Ptr;
+    }
+
+    LoadInst* BuilderGfxMem::LOAD(Value *Ptr, const char *Name, Type *Ty, JIT_MEM_CLIENT usage)
+    {
+        AssertGFXMemoryParams(Ptr, usage);
+
+        Ptr = TranslationHelper(Ptr, Ty);
         return Builder::LOAD(Ptr, Name);
     }
 
-    LoadInst* BuilderGfxMem::LOAD(Value *Ptr, const Twine &Name, JIT_MEM_CLIENT usage)
+    LoadInst* BuilderGfxMem::LOAD(Value *Ptr, const Twine &Name, Type *Ty, JIT_MEM_CLIENT usage)
     {
+        AssertGFXMemoryParams(Ptr, usage);
+
+        Ptr = TranslationHelper(Ptr, Ty);
         return Builder::LOAD(Ptr, Name);
     }
 
     LoadInst* BuilderGfxMem::LOAD(Type *Ty, Value *Ptr, const Twine &Name, JIT_MEM_CLIENT usage)
     {
+        AssertGFXMemoryParams(Ptr, usage);
+
+        Ptr = TranslationHelper(Ptr, Ty);
         return Builder::LOAD(Ty, Ptr, Name);
     }
     
-    LoadInst* BuilderGfxMem::LOAD(Value *Ptr, bool isVolatile, const Twine &Name, JIT_MEM_CLIENT usage)
+    LoadInst* BuilderGfxMem::LOAD(Value *Ptr, bool isVolatile, const Twine &Name, Type *Ty, JIT_MEM_CLIENT usage)
     {
+        AssertGFXMemoryParams(Ptr, usage);
+
+        Ptr = TranslationHelper(Ptr, Ty);
         return Builder::LOAD(Ptr, isVolatile, Name);
     }
 
-    LoadInst *BuilderGfxMem::LOAD(Value *BasePtr, const std::initializer_list<uint32_t> &offset, const llvm::Twine& name, JIT_MEM_CLIENT usage)
+    LoadInst *BuilderGfxMem::LOAD(Value *BasePtr, const std::initializer_list<uint32_t> &offset, const llvm::Twine& name, Type *Ty, JIT_MEM_CLIENT usage)
     {
-        return Builder::LOAD(BasePtr, offset, name);
+        AssertGFXMemoryParams(BasePtr, usage);
+
+        // This call is just a pass through to the base class.
+        // It needs to be here to compile due to the combination of virtual overrides and signature overloads.
+        // It doesn't do anything meaningful because the implementation in the base class is going to call 
+        // another version of LOAD inside itself where the actual per offset translation will take place 
+        // and we can't just translate the BasePtr once, each address needs individual translation.
+        return Builder::LOAD(BasePtr, offset, name, Ty, usage);
+    }
+
+    CallInst* BuilderGfxMem::MASKED_LOAD(Value *Ptr, unsigned Align, Value *Mask, Value *PassThru, const Twine &Name, Type *Ty, JIT_MEM_CLIENT usage)
+    {
+        AssertGFXMemoryParams(Ptr, usage);
+
+        Ptr = TranslationHelper(Ptr, Ty);
+        return Builder::MASKED_LOAD(Ptr, Align, Mask, PassThru, Name, Ty, usage);
     }
 
     Value* BuilderGfxMem::TranslateGfxAddress(Value* xpGfxAddress)

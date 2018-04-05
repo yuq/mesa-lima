@@ -582,7 +582,7 @@ struct SWR_VERTEX_BUFFER_STATE
 
 struct SWR_INDEX_BUFFER_STATE
 {
-    const void *pIndices;
+    gfxptr_t xpIndices;
     // Format type for indices (e.g. UINT16, UINT32, etc.)
     SWR_FORMAT format; // @llvm_enum
     uint32_t size;
@@ -598,8 +598,8 @@ struct SWR_INDEX_BUFFER_STATE
 struct SWR_FETCH_CONTEXT
 {
     const SWR_VERTEX_BUFFER_STATE* pStreams;    // IN: array of bound vertex buffers
-    const int32_t* pIndices;                    // IN: pointer to index buffer for indexed draws
-    const int32_t* pLastIndex;                  // IN: pointer to end of index buffer, used for bounds checking
+    gfxptr_t xpIndices;                          // IN: pointer to int32 index buffer for indexed draws
+    gfxptr_t xpLastIndex;                        // IN: pointer to end of index buffer, used for bounds checking
     uint32_t CurInstance;                       // IN: current instance
     uint32_t BaseVertex;                        // IN: base vertex
     uint32_t StartVertex;                       // IN: start vertex

@@ -45,16 +45,27 @@ void AssertMemoryUsageParams(Value* ptr, JIT_MEM_CLIENT usage);
 
 public:
 
-Value *GEP(Value* ptr, const std::initializer_list<Value*> &indexList);
-Value *GEP(Value* ptr, const std::initializer_list<uint32_t> &indexList);
+virtual Value *GEP(Value *Ptr, Value *Idx, Type *Ty = nullptr, const Twine &Name = "");
+virtual Value *GEP(Type *Ty, Value *Ptr, Value *Idx, const Twine &Name = "");
+virtual Value *GEP(Value* ptr, const std::initializer_list<Value*> &indexList, Type *Ty = nullptr);
+virtual Value *GEP(Value* ptr, const std::initializer_list<uint32_t> &indexList, Type *Ty = nullptr);
+
+Value *GEPA(Value *Ptr, ArrayRef<Value *> IdxList, const Twine &Name = "");
+Value *GEPA(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList, const Twine &Name = "");
+
 Value *IN_BOUNDS_GEP(Value* ptr, const std::initializer_list<Value*> &indexList);
 Value *IN_BOUNDS_GEP(Value* ptr, const std::initializer_list<uint32_t> &indexList);
 
-virtual LoadInst* LOAD(Value *Ptr, const char *Name, JIT_MEM_CLIENT usage = MEM_CLIENT_INTERNAL);
-virtual LoadInst* LOAD(Value *Ptr, const Twine &Name = "", JIT_MEM_CLIENT usage = MEM_CLIENT_INTERNAL);
+virtual LoadInst* LOAD(Value *Ptr, const char *Name, Type *Ty = nullptr, JIT_MEM_CLIENT usage = MEM_CLIENT_INTERNAL);
+virtual LoadInst* LOAD(Value *Ptr, const Twine &Name = "", Type *Ty = nullptr, JIT_MEM_CLIENT usage = MEM_CLIENT_INTERNAL);
 virtual LoadInst* LOAD(Type *Ty, Value *Ptr, const Twine &Name = "", JIT_MEM_CLIENT usage = MEM_CLIENT_INTERNAL);
-virtual LoadInst* LOAD(Value *Ptr, bool isVolatile, const Twine &Name = "", JIT_MEM_CLIENT usage = MEM_CLIENT_INTERNAL);
-virtual LoadInst* LOAD(Value *BasePtr, const std::initializer_list<uint32_t> &offset, const llvm::Twine& Name = "", JIT_MEM_CLIENT usage = MEM_CLIENT_INTERNAL);
+virtual LoadInst* LOAD(Value *Ptr, bool isVolatile, const Twine &Name = "", Type *Ty = nullptr, JIT_MEM_CLIENT usage = MEM_CLIENT_INTERNAL);
+virtual LoadInst* LOAD(Value *BasePtr, const std::initializer_list<uint32_t> &offset, const llvm::Twine& Name = "", Type *Ty = nullptr, JIT_MEM_CLIENT usage = MEM_CLIENT_INTERNAL);
+
+virtual CallInst* MASKED_LOAD(Value *Ptr, unsigned Align, Value *Mask, Value *PassThru = nullptr, const Twine &Name = "", Type *Ty = nullptr, JIT_MEM_CLIENT usage = MEM_CLIENT_INTERNAL)
+{
+    return IRB()->CreateMaskedLoad(Ptr, Align, Mask, PassThru, Name);
+}
 
 LoadInst *LOADV(Value *BasePtr, const std::initializer_list<Value*> &offset, const llvm::Twine& name = "");
 StoreInst *STORE(Value *Val, Value *BasePtr, const std::initializer_list<uint32_t> &offset);

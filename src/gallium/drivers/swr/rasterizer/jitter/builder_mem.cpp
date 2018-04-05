@@ -41,7 +41,17 @@ namespace SwrJit
         SWR_ASSERT(ptr->getType() != mInt64Ty, "Address appears to be GFX access.  Requires translation through BuilderGfxMem.");
     }
 
-    Value *Builder::GEP(Value* ptr, const std::initializer_list<Value*> &indexList)
+    Value *Builder::GEP(Value *Ptr, Value *Idx, Type *Ty, const Twine &Name)
+    {
+        return IRB()->CreateGEP(Ptr, Idx, Name);
+    }
+
+    Value *Builder::GEP(Type *Ty, Value *Ptr, Value *Idx, const Twine &Name)
+    {
+        return IRB()->CreateGEP(Ty, Ptr, Idx, Name);
+    }
+
+    Value *Builder::GEP(Value* ptr, const std::initializer_list<Value*> &indexList, Type *Ty)
     {
         std::vector<Value*> indices;
         for (auto i : indexList)
@@ -49,12 +59,22 @@ namespace SwrJit
         return GEPA(ptr, indices);
     }
 
-    Value *Builder::GEP(Value* ptr, const std::initializer_list<uint32_t> &indexList)
+    Value *Builder::GEP(Value* ptr, const std::initializer_list<uint32_t> &indexList, Type *Ty)
     {
         std::vector<Value*> indices;
         for (auto i : indexList)
             indices.push_back(C(i));
         return GEPA(ptr, indices);
+    }
+
+    Value *Builder::GEPA(Value *Ptr, ArrayRef<Value *> IdxList, const Twine &Name)
+    {
+        return IRB()->CreateGEP(Ptr, IdxList, Name);
+    }
+
+    Value *Builder::GEPA(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList, const Twine &Name)
+    {
+        return IRB()->CreateGEP(Ty, Ptr, IdxList, Name);
     }
 
     Value *Builder::IN_BOUNDS_GEP(Value* ptr, const std::initializer_list<Value*> &indexList)
@@ -73,13 +93,13 @@ namespace SwrJit
         return IN_BOUNDS_GEP(ptr, indices);
     }
 
-    LoadInst* Builder::LOAD(Value *Ptr, const char *Name, JIT_MEM_CLIENT usage)
+    LoadInst* Builder::LOAD(Value *Ptr, const char *Name, Type *Ty, JIT_MEM_CLIENT usage)
     {
         AssertMemoryUsageParams(Ptr, usage);
         return IRB()->CreateLoad(Ptr, Name);
     }
 
-    LoadInst* Builder::LOAD(Value *Ptr, const Twine &Name, JIT_MEM_CLIENT usage)
+    LoadInst* Builder::LOAD(Value *Ptr, const Twine &Name, Type *Ty, JIT_MEM_CLIENT usage)
     {
         AssertMemoryUsageParams(Ptr, usage);
         return IRB()->CreateLoad(Ptr, Name);
@@ -91,19 +111,18 @@ namespace SwrJit
         return IRB()->CreateLoad(Ty, Ptr, Name);
     }
 
-    LoadInst* Builder::LOAD(Value *Ptr, bool isVolatile, const Twine &Name, JIT_MEM_CLIENT usage)
+    LoadInst* Builder::LOAD(Value *Ptr, bool isVolatile, const Twine &Name, Type *Ty, JIT_MEM_CLIENT usage)
     {
         AssertMemoryUsageParams(Ptr, usage);
         return IRB()->CreateLoad(Ptr, isVolatile, Name);
     }
 
-    LoadInst *Builder::LOAD(Value *basePtr, const std::initializer_list<uint32_t> &indices, const llvm::Twine& name, JIT_MEM_CLIENT usage)
+    LoadInst *Builder::LOAD(Value *basePtr, const std::initializer_list<uint32_t> &indices, const llvm::Twine& name, Type *Ty, JIT_MEM_CLIENT usage)
     {
-        AssertMemoryUsageParams(basePtr, usage);
         std::vector<Value*> valIndices;
         for (auto i : indices)
             valIndices.push_back(C(i));
-        return LOAD(GEPA(basePtr, valIndices), name);
+        return Builder::LOAD(GEPA(basePtr, valIndices), name);
     }
 
     LoadInst *Builder::LOADV(Value *basePtr, const std::initializer_list<Value*> &indices, const llvm::Twine& name)

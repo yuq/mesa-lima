@@ -162,7 +162,9 @@ def parse_ir_builder(input_file):
                     if (func_name == 'CreateInsertNUWNSWBinOp' or
                         func_name == 'CreateMaskedIntrinsic' or
                         func_name == 'CreateAlignmentAssumptionHelper' or
-                        func_name == 'CreateLoad'):
+                        func_name == 'CreateGEP' or
+                        func_name == 'CreateLoad' or
+                        func_name == 'CreateMaskedLoad'):
                         ignore = True
 
                     # Convert CamelCase to CAMEL_CASE

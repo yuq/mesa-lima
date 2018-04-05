@@ -133,11 +133,11 @@ Function* FetchJit::Create(const FETCH_COMPILE_STATE& fetchState)
     streams->setName("pStreams");
 
     // SWR_FETCH_CONTEXT::pIndices
-    Value*    indices = LOAD(mpFetchInfo,{0, SWR_FETCH_CONTEXT_pIndices});
+    Value*    indices = LOAD(mpFetchInfo,{0, SWR_FETCH_CONTEXT_xpIndices});
     indices->setName("pIndices");
 
     // SWR_FETCH_CONTEXT::pLastIndex
-    Value*    pLastIndex = LOAD(mpFetchInfo,{0, SWR_FETCH_CONTEXT_pLastIndex});
+    Value*    pLastIndex = LOAD(mpFetchInfo,{0, SWR_FETCH_CONTEXT_xpLastIndex});
     pLastIndex->setName("pLastIndex");
 
     Value* vIndices;
@@ -152,12 +152,10 @@ Function* FetchJit::Create(const FETCH_COMPILE_STATE& fetchState)
             }
             else
             {
-                pLastIndex = BITCAST(pLastIndex, Type::getInt8PtrTy(JM()->mContext, 0));
                 vIndices = GetSimdValid8bitIndices(indices, pLastIndex);
             }
             break;
         case R16_UINT: 
-            indices = BITCAST(indices, Type::getInt16PtrTy(JM()->mContext, 0)); 
             if(fetchState.bDisableIndexOOBCheck)
             {
                 vIndices = LOAD(BITCAST(indices, PointerType::get(VectorType::get(mInt16Ty, mpJitMgr->mVWidth), 0)), {(uint32_t)0});
@@ -165,12 +163,11 @@ Function* FetchJit::Create(const FETCH_COMPILE_STATE& fetchState)
             }
             else
             {
-                pLastIndex = BITCAST(pLastIndex, Type::getInt16PtrTy(JM()->mContext, 0));
                 vIndices = GetSimdValid16bitIndices(indices, pLastIndex);
             }
             break;
         case R32_UINT:
-            (fetchState.bDisableIndexOOBCheck) ? vIndices = LOAD(BITCAST(indices, PointerType::get(mSimdInt32Ty,0)),{(uint32_t)0})
+            (fetchState.bDisableIndexOOBCheck) ? vIndices = LOAD(indices, "", PointerType::get(mSimdInt32Ty, 0), GFX_MEM_CLIENT_FETCH)
                                                : vIndices = GetSimdValid32bitIndices(indices, pLastIndex);
             break; // incoming type is already 32bit int
         default:
@@ -967,6 +964,10 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
     }
 }
 
+typedef void*(*PFN_TRANSLATEGFXADDRESS_FUNC)(void* pdc, gfxptr_t va);
+extern "C" void GetSimdValid8bitIndicesGfx(gfxptr_t indices, gfxptr_t lastIndex, uint32_t vWidth, PFN_TRANSLATEGFXADDRESS_FUNC pfnTranslate, void* pdc, uint32_t* outIndices);
+extern "C" void GetSimdValid16bitIndicesGfx(gfxptr_t indices, gfxptr_t lastIndex, uint32_t vWidth, PFN_TRANSLATEGFXADDRESS_FUNC pfnTranslate, void* pdc, uint32_t* outIndices);
+
 //////////////////////////////////////////////////////////////////////////
 /// @brief Loads a simd of valid indices. OOB indices are set to 0
 /// *Note* have to do 16bit index checking in scalar until we have AVX-512
@@ -975,30 +976,36 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
 /// @param pLastIndex - pointer to last valid index
 Value* FetchJit::GetSimdValid8bitIndices(Value* pIndices, Value* pLastIndex)
 {
-    // can fit 2 16 bit integers per vWidth lane
-    Value* vIndices =  VUNDEF_I();
+    SWR_ASSERT(pIndices->getType() == mInt64Ty && pLastIndex->getType() == mInt64Ty, "Function expects gfxptr_t for both input parameters.");
 
-    // store 0 index on stack to be used to conditionally load from if index address is OOB
-    Value* pZeroIndex = ALLOCA(mInt8Ty);
-    STORE(C((uint8_t)0), pZeroIndex);
+    Value* vIndices = VUNDEF_I();
 
-    // Load a SIMD of index pointers
-    for(int64_t lane = 0; lane < mVWidth; lane++)
     {
-        // Calculate the address of the requested index
-        Value *pIndex = GEP(pIndices, C(lane));
+        // store 0 index on stack to be used to conditionally load from if index address is OOB
+        Value* pZeroIndex = ALLOCA(mInt8Ty);
+        STORE(C((uint8_t)0), pZeroIndex);
 
-        // check if the address is less than the max index, 
-        Value* mask = ICMP_ULT(pIndex, pLastIndex);
+        // Load a SIMD of index pointers
+        for (int64_t lane = 0; lane < mVWidth; lane++)
+        {
+            // Calculate the address of the requested index
+            Value *pIndex = GEP(pIndices, C(lane), mInt8PtrTy);
 
-        // if valid, load the index. if not, load 0 from the stack
-        Value* pValid = SELECT(mask, pIndex, pZeroIndex);
-        Value *index = LOAD(pValid, "valid index");
+            pLastIndex = INT_TO_PTR(pLastIndex, mInt8PtrTy);
 
-        // zero extended index to 32 bits and insert into the correct simd lane
-        index = Z_EXT(index, mInt32Ty);
-        vIndices = VINSERT(vIndices, index, lane);
+            // check if the address is less than the max index, 
+            Value* mask = ICMP_ULT(pIndex, pLastIndex);
+
+            // if valid, load the index. if not, load 0 from the stack
+            Value* pValid = SELECT(mask, pIndex, pZeroIndex);
+            Value *index = LOAD(pValid, "valid index", PointerType::get(mInt8Ty, 0), GFX_MEM_CLIENT_FETCH);
+
+            // zero extended index to 32 bits and insert into the correct simd lane
+            index = Z_EXT(index, mInt32Ty);
+            vIndices = VINSERT(vIndices, index, lane);
+        }
     }
+
     return vIndices;
 }
 
@@ -1010,30 +1017,36 @@ Value* FetchJit::GetSimdValid8bitIndices(Value* pIndices, Value* pLastIndex)
 /// @param pLastIndex - pointer to last valid index
 Value* FetchJit::GetSimdValid16bitIndices(Value* pIndices, Value* pLastIndex)
 {
-    // can fit 2 16 bit integers per vWidth lane
-    Value* vIndices =  VUNDEF_I();
+    SWR_ASSERT(pIndices->getType() == mInt64Ty && pLastIndex->getType() == mInt64Ty, "Function expects gfxptr_t for both input parameters.");
 
-    // store 0 index on stack to be used to conditionally load from if index address is OOB
-    Value* pZeroIndex = ALLOCA(mInt16Ty);
-    STORE(C((uint16_t)0), pZeroIndex);
+    Value* vIndices = VUNDEF_I();
 
-    // Load a SIMD of index pointers
-    for(int64_t lane = 0; lane < mVWidth; lane++)
     {
-        // Calculate the address of the requested index
-        Value *pIndex = GEP(pIndices, C(lane));
+        // store 0 index on stack to be used to conditionally load from if index address is OOB
+        Value* pZeroIndex = ALLOCA(mInt16Ty);
+        STORE(C((uint16_t)0), pZeroIndex);
 
-        // check if the address is less than the max index, 
-        Value* mask = ICMP_ULT(pIndex, pLastIndex);
+        // Load a SIMD of index pointers
+        for (int64_t lane = 0; lane < mVWidth; lane++)
+        {
+            // Calculate the address of the requested index
+            Value *pIndex = GEP(pIndices, C(lane), mInt16PtrTy);
 
-        // if valid, load the index. if not, load 0 from the stack
-        Value* pValid = SELECT(mask, pIndex, pZeroIndex);
-        Value *index = LOAD(pValid, "valid index", GFX_MEM_CLIENT_FETCH);
+            pLastIndex = INT_TO_PTR(pLastIndex, mInt16PtrTy);
 
-        // zero extended index to 32 bits and insert into the correct simd lane
-        index = Z_EXT(index, mInt32Ty);
-        vIndices = VINSERT(vIndices, index, lane);
+            // check if the address is less than the max index, 
+            Value* mask = ICMP_ULT(pIndex, pLastIndex);
+
+            // if valid, load the index. if not, load 0 from the stack
+            Value* pValid = SELECT(mask, pIndex, pZeroIndex);
+            Value *index = LOAD(pValid, "valid index", PointerType::get(mInt16Ty, 0), GFX_MEM_CLIENT_FETCH);
+
+            // zero extended index to 32 bits and insert into the correct simd lane
+            index = Z_EXT(index, mInt32Ty);
+            vIndices = VINSERT(vIndices, index, lane);
+        }
     }
+
     return vIndices;
 }
 
@@ -1045,8 +1058,8 @@ Value* FetchJit::GetSimdValid32bitIndices(Value* pIndices, Value* pLastIndex)
 {
     DataLayout dL(JM()->mpCurrentModule);
     unsigned int ptrSize = dL.getPointerSize() * 8;  // ptr size in bits
-    Value* iLastIndex = PTR_TO_INT(pLastIndex, Type::getIntNTy(JM()->mContext, ptrSize));
-    Value* iIndices = PTR_TO_INT(pIndices, Type::getIntNTy(JM()->mContext, ptrSize));
+    Value* iLastIndex = pLastIndex; 
+    Value* iIndices = pIndices;
 
     // get the number of indices left in the buffer (endPtr - curPtr) / sizeof(index)
     Value* numIndicesLeft = SUB(iLastIndex,iIndices);
@@ -1918,7 +1931,7 @@ void FetchJit::StoreVertexElements(Value* pVtxOut, const uint32_t outputElt, con
 #endif
         // outputElt * 4 = offsetting by the size of a simdvertex
         // + c offsets to a 32bit x vWidth row within the current vertex
-        Value* dest = GEP(pVtxOut, C(outputElt * 4 + c), "destGEP");
+        Value* dest = GEP(pVtxOut, C(outputElt * 4 + c), nullptr, "destGEP");
         STORE(vVertexElements[c], dest);
     }
 }
