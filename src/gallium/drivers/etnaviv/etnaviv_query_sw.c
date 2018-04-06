@@ -145,7 +145,7 @@ etna_sw_get_driver_query_group_info(struct pipe_screen *pscreen,
                                     struct pipe_driver_query_group_info *info)
 {
    if (!info)
-      return ARRAY_SIZE(list);
+      return 1;
 
    if (index != 0)
       return 0;
