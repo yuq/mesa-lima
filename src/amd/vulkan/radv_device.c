@@ -3622,7 +3622,7 @@ radv_calc_decompress_on_z_planes(struct radv_device *device,
 {
 	unsigned max_zplanes = 0;
 
-	assert(iview->image->tc_compatible_htile);
+	assert(radv_image_is_tc_compat_htile(iview->image));
 
 	if (device->physical_device->rad_info.chip_class >= GFX9) {
 		/* Default value for 32-bit depth surfaces. */
@@ -3724,7 +3724,7 @@ radv_initialise_ds_surface(struct radv_device *device,
 		if (radv_htile_enabled(iview->image, level)) {
 			ds->db_z_info |= S_028038_TILE_SURFACE_ENABLE(1);
 
-			if (iview->image->tc_compatible_htile) {
+			if (radv_image_is_tc_compat_htile(iview->image)) {
 				unsigned max_zplanes =
 					radv_calc_decompress_on_z_planes(device, iview);
 
@@ -3752,7 +3752,7 @@ radv_initialise_ds_surface(struct radv_device *device,
 		z_offs += iview->image->surface.u.legacy.level[level].offset;
 		s_offs += iview->image->surface.u.legacy.stencil_level[level].offset;
 
-		ds->db_depth_info = S_02803C_ADDR5_SWIZZLE_MASK(!iview->image->tc_compatible_htile);
+		ds->db_depth_info = S_02803C_ADDR5_SWIZZLE_MASK(!radv_image_is_tc_compat_htile(iview->image));
 		ds->db_z_info = S_028040_FORMAT(format) | S_028040_ZRANGE_PRECISION(1);
 		ds->db_stencil_info = S_028044_FORMAT(stencil_format);
 
@@ -3797,7 +3797,7 @@ radv_initialise_ds_surface(struct radv_device *device,
 			ds->db_z_info |= S_028040_TILE_SURFACE_ENABLE(1);
 
 			if (!iview->image->surface.has_stencil &&
-			    !iview->image->tc_compatible_htile)
+			    !radv_image_is_tc_compat_htile(iview->image))
 				/* Use all of the htile_buffer for depth if there's no stencil. */
 				ds->db_stencil_info |= S_028044_TILE_STENCIL_DISABLE(1);
 
@@ -3806,7 +3806,7 @@ radv_initialise_ds_surface(struct radv_device *device,
 			ds->db_htile_data_base = va >> 8;
 			ds->db_htile_surface = S_028ABC_FULL_CACHE(1);
 
-			if (iview->image->tc_compatible_htile) {
+			if (radv_image_is_tc_compat_htile(iview->image)) {
 				unsigned max_zplanes =
 					radv_calc_decompress_on_z_planes(device, iview);
 

@@ -1439,6 +1439,15 @@ radv_htile_enabled(const struct radv_image *image, unsigned level)
 	return radv_image_has_htile(image) && level == 0;
 }
 
+/**
+ * Return whether the image is TC-compatible HTILE.
+ */
+static inline bool
+radv_image_is_tc_compat_htile(const struct radv_image *image)
+{
+	return radv_image_has_htile(image) && image->tc_compatible_htile;
+}
+
 unsigned radv_image_queue_family_mask(const struct radv_image *image, uint32_t family, uint32_t queue_family);
 
 static inline uint32_t

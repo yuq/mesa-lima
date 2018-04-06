@@ -90,7 +90,7 @@ blit_surf_for_image_level_layer(struct radv_image *image,
 		format = vk_format_stencil_only(format);
 
 	if (!radv_image_has_dcc(image) &&
-	    !(radv_image_has_htile(image) && image->tc_compatible_htile))
+	    !(radv_image_is_tc_compat_htile(image)))
 		format = vk_format_for_size(vk_format_get_blocksize(format));
 
 	return (struct radv_meta_blit2d_surf) {

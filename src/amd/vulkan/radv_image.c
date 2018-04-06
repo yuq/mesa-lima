@@ -336,8 +336,8 @@ si_set_mutable_tex_desc_fields(struct radv_device *device,
 			meta_va = gpu_address + image->dcc_offset;
 			if (chip_class <= VI)
 				meta_va += base_level_info->dcc_offset;
-		} else if(!is_storage_image && image->tc_compatible_htile &&
-		          radv_image_has_htile(image)) {
+		} else if (!is_storage_image &&
+			   radv_image_is_tc_compat_htile(image)) {
 			meta_va = gpu_address + image->htile_offset;
 		}
 
@@ -488,7 +488,7 @@ si_make_texture_descriptor(struct radv_device *device,
 	/* S8 with either Z16 or Z32 HTILE need a special format. */
 	if (device->physical_device->rad_info.chip_class >= GFX9 &&
 	    vk_format == VK_FORMAT_S8_UINT &&
-	    image->tc_compatible_htile) {
+	    radv_image_is_tc_compat_htile(image)) {
 		if (image->vk_format == VK_FORMAT_D32_SFLOAT_S8_UINT)
 			data_format = V_008F14_IMG_DATA_FORMAT_S8_32;
 		else if (image->vk_format == VK_FORMAT_D16_UNORM_S8_UINT)
@@ -1201,7 +1201,7 @@ bool radv_layout_has_htile(const struct radv_image *image,
                            VkImageLayout layout,
                            unsigned queue_mask)
 {
-	if (radv_image_has_htile(image) && image->tc_compatible_htile)
+	if (radv_image_is_tc_compat_htile(image))
 		return layout != VK_IMAGE_LAYOUT_GENERAL;
 
 	return radv_image_has_htile(image) &&
@@ -1214,7 +1214,7 @@ bool radv_layout_is_htile_compressed(const struct radv_image *image,
                                      VkImageLayout layout,
                                      unsigned queue_mask)
 {
-	if (radv_image_has_htile(image) && image->tc_compatible_htile)
+	if (radv_image_is_tc_compat_htile(image))
 		return layout != VK_IMAGE_LAYOUT_GENERAL;
 
 	return radv_image_has_htile(image) &&
