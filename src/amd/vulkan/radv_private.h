@@ -1396,6 +1396,42 @@ radv_htile_enabled(const struct radv_image *image, unsigned level)
 	return image->surface.htile_size && level == 0;
 }
 
+/**
+ * Return whether the image has CMASK metadata for color surfaces.
+ */
+static inline bool
+radv_image_has_cmask(const struct radv_image *image)
+{
+	return image->cmask.size;
+}
+
+/**
+ * Return whether the image has FMASK metadata for color surfaces.
+ */
+static inline bool
+radv_image_has_fmask(const struct radv_image *image)
+{
+	return image->fmask.size;
+}
+
+/**
+ * Return whether the image has DCC metadata for color surfaces.
+ */
+static inline bool
+radv_image_has_dcc(const struct radv_image *image)
+{
+	return image->surface.dcc_size;
+}
+
+/**
+ * Return whether the image has HTILE metadata for depth surfaces.
+ */
+static inline bool
+radv_image_has_htile(const struct radv_image *image)
+{
+	return image->surface.htile_size;
+}
+
 unsigned radv_image_queue_family_mask(const struct radv_image *image, uint32_t family, uint32_t queue_family);
 
 static inline uint32_t

@@ -558,7 +558,7 @@ static bool depth_view_can_fast_clear(struct radv_cmd_buffer *cmd_buffer,
 	      clear_value.depth != 1.0) ||
 	     ((aspects & VK_IMAGE_ASPECT_STENCIL_BIT) && clear_value.stencil != 0)))
 		return false;
-	if (iview->image->surface.htile_size &&
+	if (radv_image_has_htile(iview->image) &&
 	    iview->base_mip == 0 &&
 	    iview->base_layer == 0 &&
 	    radv_layout_is_htile_compressed(iview->image, layout, queue_mask) &&
@@ -682,7 +682,7 @@ emit_fast_htile_clear(struct radv_cmd_buffer *cmd_buffer,
 	VkImageAspectFlags aspects = clear_att->aspectMask;
 	uint32_t clear_word, flush_bits;
 
-	if (!iview->image->surface.htile_size)
+	if (!radv_image_has_htile(iview->image))
 		return false;
 
 	if (cmd_buffer->device->instance->debug_flags & RADV_DEBUG_NO_FAST_CLEARS)
@@ -867,7 +867,7 @@ radv_get_cmask_fast_clear_value(const struct radv_image *image)
 	/* The fast-clear value is different for images that have both DCC and
 	 * CMASK metadata.
 	 */
-	if (image->surface.dcc_size) {
+	if (radv_image_has_dcc(image)) {
 		/* DCC fast clear with MSAA should clear CMASK to 0xC. */
 		return image->info.samples > 1 ? 0xcccccccc : 0xffffffff;
 	}
@@ -989,7 +989,7 @@ emit_fast_color_clear(struct radv_cmd_buffer *cmd_buffer,
 	uint32_t cmask_clear_value;
 	bool ret;
 
-	if (!iview->image->cmask.size && !iview->image->surface.dcc_size)
+	if (!radv_image_has_cmask(iview->image) && !radv_image_has_dcc(iview->image))
 		return false;
 
 	if (cmd_buffer->device->instance->debug_flags & RADV_DEBUG_NO_FAST_CLEARS)
@@ -1030,7 +1030,7 @@ emit_fast_color_clear(struct radv_cmd_buffer *cmd_buffer,
 		goto fail;
 
 	/* RB+ doesn't work with CMASK fast clear on Stoney. */
-	if (!iview->image->surface.dcc_size &&
+	if (!radv_image_has_dcc(iview->image) &&
 	    cmd_buffer->device->physical_device->rad_info.family == CHIP_STONEY)
 		goto fail;
 
@@ -1051,7 +1051,7 @@ emit_fast_color_clear(struct radv_cmd_buffer *cmd_buffer,
 	cmask_clear_value = radv_get_cmask_fast_clear_value(iview->image);
 
 	/* clear cmask buffer */
-	if (iview->image->surface.dcc_size) {
+	if (radv_image_has_dcc(iview->image)) {
 		uint32_t reset_value;
 		bool can_avoid_fast_clear_elim;
 		vi_get_fast_clear_parameters(iview->image->vk_format,

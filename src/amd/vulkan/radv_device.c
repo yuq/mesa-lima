@@ -3463,7 +3463,7 @@ radv_initialise_color_surface(struct radv_device *device,
 
 		cb->cb_color_attrib |= S_028C74_TILE_MODE_INDEX(tile_mode_index);
 
-		if (iview->image->fmask.size) {
+		if (radv_image_has_fmask(iview->image)) {
 			if (device->physical_device->rad_info.chip_class >= CIK)
 				cb->cb_color_pitch |= S_028C64_FMASK_TILE_MAX(iview->image->fmask.pitch_in_pixels / 8 - 1);
 			cb->cb_color_attrib |= S_028C74_FMASK_TILE_MODE_INDEX(iview->image->fmask.tile_mode_index);
@@ -3498,7 +3498,7 @@ radv_initialise_color_surface(struct radv_device *device,
 			S_028C74_NUM_FRAGMENTS(log_samples);
 	}
 
-	if (iview->image->fmask.size) {
+	if (radv_image_has_fmask(iview->image)) {
 		va = radv_buffer_get_va(iview->bo) + iview->image->offset + iview->image->fmask.offset;
 		cb->cb_color_fmask = va >> 8;
 		cb->cb_color_fmask |= iview->image->fmask.tile_swizzle;
@@ -3548,7 +3548,7 @@ radv_initialise_color_surface(struct radv_device *device,
 				    format != V_028C70_COLOR_24_8) |
 		S_028C70_NUMBER_TYPE(ntype) |
 		S_028C70_ENDIAN(endian);
-	if ((iview->image->info.samples > 1) && iview->image->fmask.size) {
+	if ((iview->image->info.samples > 1) && radv_image_has_fmask(iview->image)) {
 		cb->cb_color_info |= S_028C70_COMPRESSION(1);
 		if (device->physical_device->rad_info.chip_class == SI) {
 			unsigned fmask_bankh = util_logbase2(iview->image->fmask.bank_height);
@@ -3556,7 +3556,7 @@ radv_initialise_color_surface(struct radv_device *device,
 		}
 	}
 
-	if (iview->image->cmask.size &&
+	if (radv_image_has_cmask(iview->image) &&
 	    !(device->instance->debug_flags & RADV_DEBUG_NO_FAST_CLEARS))
 		cb->cb_color_info |= S_028C70_FAST_CLEAR(1);
 
@@ -3597,7 +3597,7 @@ radv_initialise_color_surface(struct radv_device *device,
 	}
 
 	/* This must be set for fast clear to work without FMASK. */
-	if (!iview->image->fmask.size &&
+	if (!radv_image_has_fmask(iview->image) &&
 	    device->physical_device->rad_info.chip_class == SI) {
 		unsigned bankh = util_logbase2(iview->image->surface.u.legacy.bankh);
 		cb->cb_color_attrib |= S_028C74_FMASK_BANK_HEIGHT(bankh);

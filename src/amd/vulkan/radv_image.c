@@ -299,7 +299,7 @@ si_set_mutable_tex_desc_fields(struct radv_device *device,
 			if (chip_class <= VI)
 				meta_va += base_level_info->dcc_offset;
 		} else if(!is_storage_image && image->tc_compatible_htile &&
-		          image->surface.htile_size) {
+		          radv_image_has_htile(image)) {
 			meta_va = gpu_address + image->htile_offset;
 		}
 
@@ -526,7 +526,7 @@ si_make_texture_descriptor(struct radv_device *device,
 	}
 
 	/* Initialize the sampler view for FMASK. */
-	if (image->fmask.size) {
+	if (radv_image_has_fmask(image)) {
 		uint32_t fmask_format, num_format;
 		uint64_t gpu_address = radv_buffer_get_va(image->bo);
 		uint64_t va;
@@ -864,7 +864,7 @@ static inline bool
 radv_image_can_enable_dcc(struct radv_image *image)
 {
 	return radv_image_can_enable_dcc_or_cmask(image) &&
-	       image->surface.dcc_size;
+	       radv_image_has_dcc(image);
 }
 
 static inline bool
@@ -1163,10 +1163,10 @@ bool radv_layout_has_htile(const struct radv_image *image,
                            VkImageLayout layout,
                            unsigned queue_mask)
 {
-	if (image->surface.htile_size && image->tc_compatible_htile)
+	if (radv_image_has_htile(image) && image->tc_compatible_htile)
 		return layout != VK_IMAGE_LAYOUT_GENERAL;
 
-	return image->surface.htile_size &&
+	return radv_image_has_htile(image) &&
 	       (layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL ||
 	        layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) &&
 	       queue_mask == (1u << RADV_QUEUE_GENERAL);
@@ -1176,10 +1176,10 @@ bool radv_layout_is_htile_compressed(const struct radv_image *image,
                                      VkImageLayout layout,
                                      unsigned queue_mask)
 {
-	if (image->surface.htile_size && image->tc_compatible_htile)
+	if (radv_image_has_htile(image) && image->tc_compatible_htile)
 		return layout != VK_IMAGE_LAYOUT_GENERAL;
 
-	return image->surface.htile_size &&
+	return radv_image_has_htile(image) &&
 	       (layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL ||
 	        layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) &&
 	       queue_mask == (1u << RADV_QUEUE_GENERAL);
