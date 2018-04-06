@@ -72,7 +72,6 @@ namespace SwrJit
     // Map of intrinsics that haven't been moved to the new mechanism yet. If used, these get the previous behavior of
     // mapping directly to avx/avx2 intrinsics.
     static std::map<std::string, Intrinsic::ID> intrinsicMap = {
-        {"meta.intrinsic.VGATHERPD",       Intrinsic::x86_avx2_gather_d_pd_256},
         {"meta.intrinsic.VROUND",          Intrinsic::x86_avx_round_ps_256},
         {"meta.intrinsic.BEXTR_32",        Intrinsic::x86_bmi_bextr_32},
         {"meta.intrinsic.VPSHUFB",         Intrinsic::x86_avx2_pshuf_b},
@@ -98,6 +97,7 @@ namespace SwrJit
         {"meta.intrinsic.VRCPPS",      {{Intrinsic::x86_avx_rcp_ps_256,              Intrinsic::not_intrinsic},                      NO_EMU}},
         {"meta.intrinsic.VPERMPS",     {{Intrinsic::not_intrinsic,                   Intrinsic::not_intrinsic},                      VPERM_EMU}},
         {"meta.intrinsic.VPERMD",      {{Intrinsic::not_intrinsic,                   Intrinsic::not_intrinsic},                      VPERM_EMU}},
+        {"meta.intrinsic.VGATHERPD",   {{Intrinsic::not_intrinsic,                   Intrinsic::not_intrinsic},                      VGATHER_EMU}},
         {"meta.intrinsic.VGATHERPS",   {{Intrinsic::not_intrinsic,                   Intrinsic::not_intrinsic},                      VGATHER_EMU}},
         {"meta.intrinsic.VGATHERDD",   {{Intrinsic::not_intrinsic,                   Intrinsic::not_intrinsic},                      VGATHER_EMU}},
         {"meta.intrinsic.VCVTPD2PS",   {{Intrinsic::x86_avx_cvt_pd2_ps_256,          Intrinsic::not_intrinsic},                      NO_EMU}},
@@ -107,6 +107,7 @@ namespace SwrJit
         {"meta.intrinsic.VRCPPS",      {{Intrinsic::x86_avx_rcp_ps_256,              Intrinsic::not_intrinsic},                      NO_EMU}},
         {"meta.intrinsic.VPERMPS",     {{Intrinsic::x86_avx2_permps,                 Intrinsic::not_intrinsic},                      VPERM_EMU}},
         {"meta.intrinsic.VPERMD",      {{Intrinsic::x86_avx2_permd,                  Intrinsic::not_intrinsic},                      VPERM_EMU}},
+        {"meta.intrinsic.VGATHERPD",   {{Intrinsic::not_intrinsic,                   Intrinsic::not_intrinsic},                      VGATHER_EMU}},
         {"meta.intrinsic.VGATHERPS",   {{Intrinsic::not_intrinsic,                   Intrinsic::not_intrinsic},                      VGATHER_EMU}},
         {"meta.intrinsic.VGATHERDD",   {{Intrinsic::not_intrinsic,                   Intrinsic::not_intrinsic},                      VGATHER_EMU}},
         {"meta.intrinsic.VCVTPD2PS",   {{Intrinsic::x86_avx_cvt_pd2_ps_256,          Intrinsic::not_intrinsic},                      NO_EMU}},
@@ -116,6 +117,7 @@ namespace SwrJit
         {"meta.intrinsic.VRCPPS",      {{Intrinsic::x86_avx512_rcp14_ps_256,         Intrinsic::x86_avx512_rcp14_ps_512},            NO_EMU}},
         {"meta.intrinsic.VPERMPS",     {{Intrinsic::x86_avx512_mask_permvar_sf_256,  Intrinsic::x86_avx512_mask_permvar_sf_512},     NO_EMU}},
         {"meta.intrinsic.VPERMD",      {{Intrinsic::x86_avx512_mask_permvar_si_256,  Intrinsic::x86_avx512_mask_permvar_si_512},     NO_EMU}},
+        {"meta.intrinsic.VGATHERPD",   {{Intrinsic::not_intrinsic,                   Intrinsic::not_intrinsic},                      VGATHER_EMU}},
         {"meta.intrinsic.VGATHERPS",   {{Intrinsic::not_intrinsic,                   Intrinsic::not_intrinsic},                      VGATHER_EMU}},
         {"meta.intrinsic.VGATHERDD",   {{Intrinsic::not_intrinsic,                   Intrinsic::not_intrinsic},                      VGATHER_EMU}},
         {"meta.intrinsic.VCVTPD2PS",   {{Intrinsic::x86_avx512_mask_cvtpd2ps_256,    Intrinsic::x86_avx512_mask_cvtpd2ps_512 },      NO_EMU}},
@@ -205,6 +207,13 @@ namespace SwrJit
             case W512: mask = B->C((uint16_t)-1); break;
             }
             return mask;
+        }
+
+        // Convert <N x i1> mask to <N x i32> x86 mask
+        Value* VectorMask(Value* vi1Mask)
+        {
+            uint32_t numElem = vi1Mask->getType()->getVectorNumElements();
+            return B->S_EXT(vi1Mask, VectorType::get(B->mInt32Ty, numElem));
         }
 
         Instruction* ProcessIntrinsicAdvanced(CallInst* pCallInst)
@@ -406,17 +415,33 @@ namespace SwrJit
         }
         else if (arch == AVX2 || (arch == AVX512 && width == W256))
         {
-            Function* pX86IntrinFunc = srcTy == B->mFP32Ty ? Intrinsic::getDeclaration(B->JM()->mpCurrentModule, Intrinsic::x86_avx2_gather_d_ps_256) :
-                Intrinsic::getDeclaration(B->JM()->mpCurrentModule, Intrinsic::x86_avx2_gather_d_d_256);
+            Function* pX86IntrinFunc;
+            if (srcTy == B->mFP32Ty)
+            {
+                pX86IntrinFunc = Intrinsic::getDeclaration(B->JM()->mpCurrentModule, Intrinsic::x86_avx2_gather_d_ps_256);
+            } 
+            else if (srcTy == B->mInt32Ty)
+            {
+                pX86IntrinFunc = Intrinsic::getDeclaration(B->JM()->mpCurrentModule, Intrinsic::x86_avx2_gather_d_d_256);
+            }
+            else if (srcTy == B->mDoubleTy)
+            {
+                pX86IntrinFunc = Intrinsic::getDeclaration(B->JM()->mpCurrentModule, Intrinsic::x86_avx2_gather_d_q_256);
+            }
+            else
+            {
+                SWR_ASSERT(false, "Unsupported vector element type for gather.");
+            }
+
             if (width == W256)
             {
-                auto v32Mask = B->BITCAST(B->VMASK(vi1Mask), vSrc->getType());
+                auto v32Mask = B->BITCAST(pThis->VectorMask(vi1Mask), vSrc->getType());
                 v32Gather = B->CALL(pX86IntrinFunc, { vSrc, pBase, vi32Indices, v32Mask, i8Scale });
             }
             else if (width == W512)
             {
                 // Double pump 8-wide
-                auto v32Mask = B->BITCAST(B->VMASK_16(vi1Mask), vSrc->getType());
+                auto v32Mask = B->BITCAST(pThis->VectorMask(vi1Mask), vSrc->getType());
                 Value *src0 = B->EXTRACT_16(vSrc, 0);
                 Value *src1 = B->EXTRACT_16(vSrc, 1);
 
@@ -434,16 +459,58 @@ namespace SwrJit
         }
         else if (arch == AVX512)
         {
-            auto i16Mask = B->BITCAST(vi1Mask, B->mInt16Ty);
+            Value* iMask;
+            Function* pX86IntrinFunc;
+            if (srcTy == B->mFP32Ty)
+            {
+                pX86IntrinFunc = Intrinsic::getDeclaration(B->JM()->mpCurrentModule, Intrinsic::x86_avx512_gather_dps_512);
+                iMask = B->BITCAST(vi1Mask, B->mInt16Ty);
+            }
+            else if (srcTy == B->mInt32Ty)
+            {
+                pX86IntrinFunc = Intrinsic::getDeclaration(B->JM()->mpCurrentModule, Intrinsic::x86_avx512_gather_dpi_512);
+                iMask = B->BITCAST(vi1Mask, B->mInt16Ty);
+            }
+            else if (srcTy == B->mDoubleTy)
+            {
+                pX86IntrinFunc = Intrinsic::getDeclaration(B->JM()->mpCurrentModule, Intrinsic::x86_avx512_gather_dpd_512);
+                iMask = B->BITCAST(vi1Mask, B->mInt8Ty);
+            }
+            else
+            {
+                SWR_ASSERT(false, "Unsupported vector element type for gather.");
+            }
 
-            Function* pX86IntrinFunc = srcTy == B->mFP32Ty ? Intrinsic::getDeclaration(B->JM()->mpCurrentModule, Intrinsic::x86_avx512_gather_dps_512) :
-                Intrinsic::getDeclaration(B->JM()->mpCurrentModule, Intrinsic::x86_avx512_gather_dpi_512);
             auto i32Scale = B->Z_EXT(i8Scale, B->mInt32Ty);
-            v32Gather = B->CALL(pX86IntrinFunc, { vSrc, pBase, vi32Indices, i16Mask, i32Scale });
+            v32Gather = B->CALL(pX86IntrinFunc, { vSrc, pBase, vi32Indices, iMask, i32Scale });
         }
 
         return cast<Instruction>(v32Gather);
     }
+
+#if 0
+    // Double pump input using Intrin template arg. This blindly extracts lower and upper 256 from each vector argument and
+    // calls the 256 wide intrinsic, then merges the results to 512 wide
+    template<Intrinsic::ID Intrin>
+    Value* EMU_512(LowerX86* pThis, TargetArch arch, TargetWidth width, CallInst* pCallInst)
+    {
+        auto B = pThis->B;
+        SWR_ASSERT(width == W512);
+        Value* result[2];
+        Function* pX86IntrinFunc = Intrinsic::getDeclaration(B->JM()->mpCurrentModule, Intrin);
+        for (uint32_t i = 0; i < 2; ++i)
+        {
+            SmallVector<Value*, 8> args;
+            for (auto& arg : pCallInst->arg_operands())
+            {
+                args.push_back(arg.get()->getType()->isVectorTy ? B->EXTRACT_16(arg.get(), i) : arg.get());
+            }
+            result[i] = B->CALL(pX86IntrinFunc, args);
+        }
+        return B->JOIN_16(result[0], result[1]);
+    }
+#endif
+
 }
 
 using namespace SwrJit;
