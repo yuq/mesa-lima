@@ -1384,12 +1384,6 @@ bool radv_layout_dcc_compressed(const struct radv_image *image,
 			        VkImageLayout layout,
 			        unsigned queue_mask);
 
-static inline bool
-radv_vi_dcc_enabled(const struct radv_image *image, unsigned level)
-{
-	return image->surface.dcc_size && level < image->surface.num_dcc_levels;
-}
-
 /**
  * Return whether the image has CMASK metadata for color surfaces.
  */
@@ -1415,6 +1409,16 @@ static inline bool
 radv_image_has_dcc(const struct radv_image *image)
 {
 	return image->surface.dcc_size;
+}
+
+/**
+ * Return whether DCC metadata is enabled for a level.
+ */
+static inline bool
+radv_dcc_enabled(const struct radv_image *image, unsigned level)
+{
+	return radv_image_has_dcc(image) &&
+	       level < image->surface.num_dcc_levels;
 }
 
 /**

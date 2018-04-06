@@ -3560,7 +3560,7 @@ radv_initialise_color_surface(struct radv_device *device,
 	    !(device->instance->debug_flags & RADV_DEBUG_NO_FAST_CLEARS))
 		cb->cb_color_info |= S_028C70_FAST_CLEAR(1);
 
-	if (radv_vi_dcc_enabled(iview->image, iview->base_mip))
+	if (radv_dcc_enabled(iview->image, iview->base_mip))
 		cb->cb_color_info |= S_028C70_DCC_ENABLE(1);
 
 	if (device->physical_device->rad_info.chip_class >= VI) {
