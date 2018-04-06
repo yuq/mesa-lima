@@ -859,6 +859,24 @@ fail:
 	return res;
 }
 
+uint32_t
+radv_clear_cmask(struct radv_cmd_buffer *cmd_buffer,
+		 struct radv_image *image, uint32_t value)
+{
+	return radv_fill_buffer(cmd_buffer, image->bo,
+				image->offset + image->cmask.offset,
+				image->cmask.size, value);
+}
+
+uint32_t
+radv_clear_dcc(struct radv_cmd_buffer *cmd_buffer,
+	       struct radv_image *image, uint32_t value)
+{
+	return radv_fill_buffer(cmd_buffer, image->bo,
+				image->offset + image->dcc_offset,
+				image->surface.dcc_size, value);
+}
+
 static void vi_get_fast_clear_parameters(VkFormat format,
 					 const VkClearColorValue *clear_value,
 					 uint32_t* reset_value,
@@ -1020,15 +1038,12 @@ emit_fast_color_clear(struct radv_cmd_buffer *cmd_buffer,
 					     &clear_value, &reset_value,
 					     &can_avoid_fast_clear_elim);
 
-		flush_bits = radv_fill_buffer(cmd_buffer, iview->image->bo,
-					      iview->image->offset + iview->image->dcc_offset,
-					      iview->image->surface.dcc_size, reset_value);
+		flush_bits = radv_clear_dcc(cmd_buffer, iview->image, reset_value);
+
 		radv_set_dcc_need_cmask_elim_pred(cmd_buffer, iview->image,
 						  !can_avoid_fast_clear_elim);
 	} else {
-		flush_bits = radv_fill_buffer(cmd_buffer, iview->image->bo,
-					      iview->image->offset + iview->image->cmask.offset,
-					      iview->image->cmask.size, 0);
+		flush_bits = radv_clear_cmask(cmd_buffer, iview->image, 0);
 	}
 
 	if (post_flush) {

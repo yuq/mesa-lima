@@ -3617,9 +3617,7 @@ void radv_initialise_cmask(struct radv_cmd_buffer *cmd_buffer,
 	state->flush_bits |= RADV_CMD_FLAG_FLUSH_AND_INV_CB |
 			    RADV_CMD_FLAG_FLUSH_AND_INV_CB_META;
 
-	state->flush_bits |= radv_fill_buffer(cmd_buffer, image->bo,
-					      image->offset + image->cmask.offset,
-					      image->cmask.size, value);
+	state->flush_bits |= radv_clear_cmask(cmd_buffer, image, value);
 
 	state->flush_bits |= RADV_CMD_FLAG_FLUSH_AND_INV_CB_META;
 }
@@ -3651,9 +3649,7 @@ void radv_initialize_dcc(struct radv_cmd_buffer *cmd_buffer,
 	state->flush_bits |= RADV_CMD_FLAG_FLUSH_AND_INV_CB |
 			     RADV_CMD_FLAG_FLUSH_AND_INV_CB_META;
 
-	state->flush_bits |= radv_fill_buffer(cmd_buffer, image->bo,
-					      image->offset + image->dcc_offset,
-					      image->surface.dcc_size, value);
+	state->flush_bits |= radv_clear_dcc(cmd_buffer, image, value);
 
 	state->flush_bits |= RADV_CMD_FLAG_FLUSH_AND_INV_CB |
 			     RADV_CMD_FLAG_FLUSH_AND_INV_CB_META;
