@@ -970,7 +970,7 @@ extern "C" void GetSimdValid16bitIndicesGfx(gfxptr_t indices, gfxptr_t lastIndex
 
 //////////////////////////////////////////////////////////////////////////
 /// @brief Loads a simd of valid indices. OOB indices are set to 0
-/// *Note* have to do 16bit index checking in scalar until we have AVX-512
+/// *Note* have to do 8bit index checking in scalar until we have AVX-512
 /// support
 /// @param pIndices - pointer to 8 bit indices
 /// @param pLastIndex - pointer to last valid index
