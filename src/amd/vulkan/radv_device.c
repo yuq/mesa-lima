@@ -961,6 +961,46 @@ void radv_GetPhysicalDeviceProperties2(
 			properties->filterMinmaxSingleComponentFormats = true;
 			break;
 		}
+		case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_CORE_PROPERTIES_AMD: {
+			VkPhysicalDeviceShaderCorePropertiesAMD *properties =
+				(VkPhysicalDeviceShaderCorePropertiesAMD *)ext;
+
+			/* Shader engines. */
+			properties->shaderEngineCount =
+				pdevice->rad_info.max_se;
+			properties->shaderArraysPerEngineCount =
+				pdevice->rad_info.max_sh_per_se;
+			properties->computeUnitsPerShaderArray =
+				pdevice->rad_info.num_good_compute_units /
+					(pdevice->rad_info.max_se *
+					 pdevice->rad_info.max_sh_per_se);
+			properties->simdPerComputeUnit = 4;
+			properties->wavefrontsPerSimd =
+				pdevice->rad_info.family == CHIP_TONGA ||
+				pdevice->rad_info.family == CHIP_ICELAND ||
+				pdevice->rad_info.family == CHIP_POLARIS10 ||
+				pdevice->rad_info.family == CHIP_POLARIS11 ||
+				pdevice->rad_info.family == CHIP_POLARIS12 ? 8 : 10;
+			properties->wavefrontSize = 64;
+
+			/* SGPR. */
+			properties->sgprsPerSimd =
+				radv_get_num_physical_sgprs(pdevice);
+			properties->minSgprAllocation =
+				pdevice->rad_info.chip_class >= VI ? 16 : 8;
+			properties->maxSgprAllocation =
+				pdevice->rad_info.family == CHIP_TONGA ||
+				pdevice->rad_info.family == CHIP_ICELAND ? 96 : 104;
+			properties->sgprAllocationGranularity =
+				pdevice->rad_info.chip_class >= VI ? 16 : 8;
+
+			/* VGPR. */
+			properties->vgprsPerSimd = RADV_NUM_PHYSICAL_VGPRS;
+			properties->minVgprAllocation = 4;
+			properties->maxVgprAllocation = 256;
+			properties->vgprAllocationGranularity = 4;
+			break;
+		}
 		default:
 			break;
 		}
