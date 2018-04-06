@@ -46,6 +46,8 @@
 // Match MAX_SETS from radv_descriptor_set.h
 #define RADV_UD_MAX_SETS MAX_SETS
 
+#define RADV_NUM_PHYSICAL_VGPRS 256
+
 struct radv_shader_module {
 	struct nir_shader *nir;
 	unsigned char sha1[20];
