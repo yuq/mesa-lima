@@ -165,3 +165,33 @@ event DrawIndexedInstancedEvent
     uint32_t soTopology;
     uint32_t splitId; // Split draw count or id.
 };
+
+event VSStats
+{
+    uint32_t numInstExecuted;
+};
+
+event HSStats
+{
+    uint32_t numInstExecuted;
+};
+
+event DSStats
+{
+    uint32_t numInstExecuted;
+};
+
+event GSStats
+{
+    uint32_t numInstExecuted;
+};
+
+event PSStats
+{
+    uint32_t numInstExecuted;
+};
+
+event CSStats
+{
+    uint32_t numInstExecuted;
+};

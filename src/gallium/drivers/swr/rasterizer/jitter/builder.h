@@ -34,6 +34,29 @@
 
 namespace SwrJit
 {
+    ///@todo Move this to better place
+    enum SHADER_STATS_COUNTER_TYPE
+    {
+        STATS_INST_EXECUTED = 0,
+        STATS_SAMPLE_EXECUTED = 1,
+        STATS_SAMPLE_L_EXECUTED = 2,
+        STATS_SAMPLE_B_EXECUTED = 3,
+        STATS_SAMPLE_C_EXECUTED = 4,
+        STATS_SAMPLE_C_LZ_EXECUTED = 5,
+        STATS_SAMPLE_C_D_EXECUTED = 6,
+        STATS_LOD_EXECUTED = 7,
+        STATS_GATHER4_EXECUTED = 8,
+        STATS_GATHER4_C_EXECUTED = 9,
+        STATS_GATHER4_C_PO_EXECUTED = 10,
+        STATS_GATHER4_C_PO_C_EXECUTED = 11,
+        STATS_LOAD_RAW_UAV = 12,
+        STATS_LOAD_RAW_RESOURCE = 13,
+        STATS_STORE_RAW_UAV = 14,
+        STATS_STORE_TGSM = 15,
+        STATS_DISCARD = 16,
+        STATS_BARRIER = 17,
+    };
+
     using namespace llvm;
     struct Builder
     {
