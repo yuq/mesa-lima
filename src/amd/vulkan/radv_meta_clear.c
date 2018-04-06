@@ -859,6 +859,22 @@ fail:
 	return res;
 }
 
+static uint32_t
+radv_get_cmask_fast_clear_value(const struct radv_image *image)
+{
+	uint32_t value = 0; /* Default value when no DCC. */
+
+	/* The fast-clear value is different for images that have both DCC and
+	 * CMASK metadata.
+	 */
+	if (image->surface.dcc_size) {
+		/* DCC fast clear with MSAA should clear CMASK to 0xC. */
+		return image->info.samples > 1 ? 0xcccccccc : 0xffffffff;
+	}
+
+	return value;
+}
+
 uint32_t
 radv_clear_cmask(struct radv_cmd_buffer *cmd_buffer,
 		 struct radv_image *image, uint32_t value)
@@ -970,6 +986,7 @@ emit_fast_color_clear(struct radv_cmd_buffer *cmd_buffer,
 	const struct radv_image_view *iview = fb->attachments[pass_att].attachment;
 	VkClearColorValue clear_value = clear_att->clearValue.color;
 	uint32_t clear_color[2], flush_bits;
+	uint32_t cmask_clear_value;
 	bool ret;
 
 	if (!iview->image->cmask.size && !iview->image->surface.dcc_size)
@@ -1030,6 +1047,9 @@ emit_fast_color_clear(struct radv_cmd_buffer *cmd_buffer,
 	} else
 		cmd_buffer->state.flush_bits |= RADV_CMD_FLAG_FLUSH_AND_INV_CB |
 		                                RADV_CMD_FLAG_FLUSH_AND_INV_CB_META;
+
+	cmask_clear_value = radv_get_cmask_fast_clear_value(iview->image);
+
 	/* clear cmask buffer */
 	if (iview->image->surface.dcc_size) {
 		uint32_t reset_value;
@@ -1043,7 +1063,8 @@ emit_fast_color_clear(struct radv_cmd_buffer *cmd_buffer,
 		radv_set_dcc_need_cmask_elim_pred(cmd_buffer, iview->image,
 						  !can_avoid_fast_clear_elim);
 	} else {
-		flush_bits = radv_clear_cmask(cmd_buffer, iview->image, 0);
+		flush_bits = radv_clear_cmask(cmd_buffer, iview->image,
+					      cmask_clear_value);
 	}
 
 	if (post_flush) {
