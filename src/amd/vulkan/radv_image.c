@@ -65,8 +65,8 @@ radv_choose_tiling(struct radv_device *device,
 }
 
 static bool
-radv_image_is_tc_compat_htile(struct radv_device *device,
-			      const VkImageCreateInfo *pCreateInfo)
+radv_use_tc_compat_htile_for_image(struct radv_device *device,
+				   const VkImageCreateInfo *pCreateInfo)
 {
 	/* TC-compat HTILE is only available for GFX8+. */
 	if (device->physical_device->rad_info.chip_class < VI)
@@ -149,7 +149,7 @@ radv_init_surface(struct radv_device *device,
 
 	if (is_depth) {
 		surface->flags |= RADEON_SURF_ZBUFFER;
-		if (radv_image_is_tc_compat_htile(device, pCreateInfo))
+		if (radv_use_tc_compat_htile_for_image(device, pCreateInfo))
 			surface->flags |= RADEON_SURF_TC_COMPATIBLE_HTILE;
 	}
 
