@@ -845,6 +845,7 @@ _mesa_init_teximage_fields_ms(struct gl_context *ctx,
                         mesa_format format,
                         GLuint numSamples, GLboolean fixedSampleLocations)
 {
+   const GLint base_format =_mesa_base_tex_format(ctx, internalFormat);
    GLenum target;
    assert(img);
    assert(width >= 0);
@@ -852,8 +853,8 @@ _mesa_init_teximage_fields_ms(struct gl_context *ctx,
    assert(depth >= 0);
 
    target = img->TexObject->Target;
-   img->_BaseFormat = _mesa_base_tex_format( ctx, internalFormat );
-   assert(img->_BaseFormat != -1);
+   assert(base_format != -1);
+   img->_BaseFormat = (GLenum16)base_format;
    img->InternalFormat = internalFormat;
    img->Border = border;
    img->Width = width;
