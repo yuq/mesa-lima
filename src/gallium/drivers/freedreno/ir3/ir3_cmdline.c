@@ -441,6 +441,7 @@ int main(int argc, char **argv)
 			tgsi_dump(toks, 0);
 
 		nir = ir3_tgsi_to_nir(toks);
+		NIR_PASS_V(nir, nir_lower_global_vars_to_local);
 	} else if (from_spirv) {
 		nir = load_spirv(filenames[0], entry, stage);
 
