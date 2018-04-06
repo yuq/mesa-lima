@@ -201,44 +201,7 @@ namespace SwrJit
     /// @param scale - value to scale indices by
     Value *Builder::GATHERPD(Value* vSrc, Value* pBase, Value* vIndices, Value* vMask, uint8_t scale)
     {
-        Value* vGather;
-
-        // use avx2 gather instruction if available
-        if (JM()->mArch.AVX2())
-        {
-            vMask = BITCAST(S_EXT(vMask, VectorType::get(mInt64Ty, mVWidth / 2)), VectorType::get(mDoubleTy, mVWidth / 2));
-            vGather = VGATHERPD(vSrc, pBase, vIndices, vMask, C(scale));
-        }
-        else
-        {
-            Value* pStack = STACKSAVE();
-
-            // store vSrc on the stack.  this way we can select between a valid load address and the vSrc address
-            Value* vSrcPtr = ALLOCA(vSrc->getType());
-            SetTempAlloca(vSrcPtr);
-            STORE(vSrc, vSrcPtr);
-
-            vGather = UndefValue::get(VectorType::get(mDoubleTy, 4));
-            Value *vScaleVec = VECTOR_SPLAT(4, C((uint32_t)scale));
-            Value *vOffsets = MUL(vIndices, vScaleVec);
-            for (uint32_t i = 0; i < mVWidth / 2; ++i)
-            {
-                // single component byte index
-                Value *offset = VEXTRACT(vOffsets, C(i));
-                // byte pointer to component
-                Value *loadAddress = GEP(pBase, offset);
-                loadAddress = BITCAST(loadAddress, PointerType::get(mDoubleTy, 0));
-                // pointer to the value to load if we're masking off a component
-                Value *maskLoadAddress = GEP(vSrcPtr, { C(0), C(i) });
-                Value *selMask = VEXTRACT(vMask, C(i));
-                // switch in a safe address to load if we're trying to access a vertex
-                Value *validAddress = SELECT(selMask, loadAddress, maskLoadAddress);
-                Value *val = LOAD(validAddress);
-                vGather = VINSERT(vGather, val, C(i));
-            }
-            STACKRESTORE(pStack);
-        }
-        return vGather;
+        return VGATHERPD(vSrc, pBase, vIndices, vMask, C(scale));
     }
 
     //////////////////////////////////////////////////////////////////////////

@@ -230,7 +230,6 @@ Function* FetchJit::Create(const FETCH_COMPILE_STATE& fetchState)
     }
 
     // Fetch attributes from memory and output to a simdvertex struct
-    // since VGATHER has a perf penalty on HSW vs BDW, allow client to choose which fetch method to use
     JitGatherVertices(fetchState, streams, vIndices, pVtxOut);
 
     RET_VOID();
@@ -763,13 +762,31 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
                             // if we need to gather the component
                             if (compCtrl[i] == StoreSrc)
                             {
-                                Value *vMaskLo = VSHUFFLE(vGatherMask, VUNDEF(mInt1Ty, 8), C({0, 1, 2, 3}));
-                                Value *vMaskHi = VSHUFFLE(vGatherMask, VUNDEF(mInt1Ty, 8), C({4, 5, 6, 7}));
+                                Value* vShufLo;
+                                Value* vShufHi;
+                                Value* vShufAll;
 
-                                Value *vOffsetsLo = VEXTRACTI128(vOffsets, C(0));
-                                Value *vOffsetsHi = VEXTRACTI128(vOffsets, C(1));
+                                if (mVWidth == 8)
+                                {
+                                    vShufLo = C({ 0, 1, 2, 3 });
+                                    vShufHi = C({ 4, 5, 6, 7 });
+                                    vShufAll = C({ 0, 1, 2, 3, 4, 5, 6, 7 });
+                                }
+                                else
+                                {
+                                    SWR_ASSERT(mVWidth == 16);
+                                    vShufLo = C({ 0, 1, 2, 3, 4, 5, 6, 7 });
+                                    vShufHi = C({ 8, 9, 10, 11, 12, 13, 14, 15 });
+                                    vShufAll = C({ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 });
+                                }
 
-                                Value *vZeroDouble = VECTOR_SPLAT(4, ConstantFP::get(IRB()->getDoubleTy(), 0.0f));
+                                Value *vMaskLo = VSHUFFLE(vGatherMask, vGatherMask, vShufLo);
+                                Value *vMaskHi = VSHUFFLE(vGatherMask, vGatherMask, vShufHi);
+
+                                Value *vOffsetsLo = VSHUFFLE(vOffsets, vOffsets, vShufLo);
+                                Value *vOffsetsHi = VSHUFFLE(vOffsets, vOffsets, vShufHi);
+
+                                Value *vZeroDouble = VECTOR_SPLAT(mVWidth / 2, ConstantFP::get(IRB()->getDoubleTy(), 0.0f));
 
                                 Value* pGatherLo = GATHERPD(vZeroDouble, pStreamBase, vOffsetsLo, vMaskLo);
                                 Value* pGatherHi = GATHERPD(vZeroDouble, pStreamBase, vOffsetsHi, vMaskHi);
@@ -777,7 +794,7 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
                                 pGatherLo = VCVTPD2PS(pGatherLo);
                                 pGatherHi = VCVTPD2PS(pGatherHi);
 
-                                Value *pGather = VSHUFFLE(pGatherLo, pGatherHi, C({0, 1, 2, 3, 4, 5, 6, 7}));
+                                Value *pGather = VSHUFFLE(pGatherLo, pGatherHi, vShufAll);
 
                                 vVertexElements[currentVertexElement++] = pGather;
                             }
