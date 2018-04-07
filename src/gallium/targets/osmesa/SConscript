@@ -15,7 +15,6 @@ env.Prepend(LIBS = [
     compiler,
     mesa,
     gallium,
-    trace,
     glsl,
     nir,
     spirv,
@@ -23,7 +22,7 @@ env.Prepend(LIBS = [
     softpipe
 ])
 
-env.Append(CPPDEFINES = ['GALLIUM_TRACE', 'GALLIUM_SOFTPIPE'])
+env.Append(CPPDEFINES = ['GALLIUM_SOFTPIPE'])
 
 sources = ['target.c']
 

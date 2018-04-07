@@ -25,11 +25,7 @@
 
 nine_version = ['1', '0', '0']
 
-gallium_nine_c_args = [
-  '-DGALLIUM_DDEBUG',
-  '-DGALLIUM_RBUG',
-  '-DGALLIUME_TRACE',
-]
+gallium_nine_c_args = []
 gallium_nine_ld_args = []
 gallium_nine_link_depends = []
 
@@ -52,8 +48,8 @@ libgallium_nine = shared_library(
   link_args : [ld_args_gc_sections, gallium_nine_ld_args],
   link_depends : gallium_nine_link_depends,
   link_with : [
-    libgalliumvl_stub, libgallium, libnine_st, libmesa_util, libddebug,
-    librbug, libtrace, libpipe_loader_static, libws_null, libwsw, libswdri,
+    libgalliumvl_stub, libgallium, libnine_st, libmesa_util,
+    libpipe_loader_static, libws_null, libwsw, libswdri,
     libswkmsdri,
   ],
   dependencies : [

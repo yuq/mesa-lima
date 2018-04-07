@@ -27,7 +27,7 @@
 #include "sid.h"
 #include "gfx9d.h"
 #include "sid_tables.h"
-#include "ddebug/dd_util.h"
+#include "driver_ddebug/dd_util.h"
 #include "util/u_dump.h"
 #include "util/u_log.h"
 #include "util/u_memory.h"

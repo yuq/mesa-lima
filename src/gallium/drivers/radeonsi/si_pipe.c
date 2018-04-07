@@ -37,7 +37,7 @@
 #include "util/u_upload_mgr.h"
 #include "util/xmlconfig.h"
 #include "vl/vl_decoder.h"
-#include "../ddebug/dd_util.h"
+#include "driver_ddebug/dd_util.h"
 
 static const struct debug_named_value debug_options[] = {
 	/* Shader logging options: */

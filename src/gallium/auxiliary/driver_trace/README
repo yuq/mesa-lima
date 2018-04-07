@@ -28,7 +28,7 @@ For long traces you can use the
 
 For remote debugging see:
 
-  src/gallium/drivers/rbug/README
+  src/gallium/auxiliary/driver_rbug/README
 
 
 = Integrating =

@@ -23,12 +23,7 @@
 # Static targets are always enabled in autotools (unless you modify
 # configure.ac)
 
-gallium_dri_c_args = [
-  '-DGALLIUM_DDEBUG',
-  '-DGALLIUM_NOOP',
-  '-DGALLIUM_RBUG',
-  '-DGALLIUME_TRACE',
-]
+gallium_dri_c_args = []
 gallium_dri_ld_args = []
 gallium_dri_link_depends = []
 gallium_dri_drivers = []
@@ -55,8 +50,8 @@ libgallium_dri = shared_library(
   link_depends : gallium_dri_link_depends,
   link_with : [
     libmesa_gallium, libdricommon, libmegadriver_stub, libdri, libgalliumvl,
-    libgallium, libddebug, libnoop, librbug, libtrace, libglapi,
-    libpipe_loader_static, libws_null, libwsw, libswdri, libswkmsdri,
+    libgallium, libglapi, libpipe_loader_static, libws_null, libwsw, libswdri,
+    libswkmsdri,
   ],
   dependencies : [
     dep_selinux, dep_expat, dep_libdrm, dep_llvm, dep_thread,

@@ -30,7 +30,7 @@ libswpipe = shared_library(
   cpp_args : [cpp_vis_args],
   link_args : [ld_args_bsymbolic, ld_args_gc_sections],
   link_with : [
-    libglapi, libswhgl, libsthgl, libtrace, librbug, libmesa_util, libcompiler,
+    libglapi, libswhgl, libsthgl, libmesa_util, libcompiler,
     libmesa_gallium, libglsl, libnir, libgallium, libgl
   ],
   dependencies : [

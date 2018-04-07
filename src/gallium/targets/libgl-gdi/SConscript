@@ -45,8 +45,6 @@ if env['gcc'] and env['machine'] != 'x86_64':
 else:
     sources += ['#src/gallium/state_trackers/wgl/opengl32.def']
 
-drivers += [trace, rbug]
-
 env['no_import_lib'] = 1
 
 # when GLES is enabled, gl* and _glapi_* belong to bridge_glapi and
