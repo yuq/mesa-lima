@@ -1869,7 +1869,7 @@ static void si_texture_transfer_unmap(struct pipe_context *ctx,
 	 * The result is that the kernel memory manager is never a bottleneck.
 	 */
 	if (sctx->num_alloc_tex_transfer_bytes > sctx->screen->info.gart_size / 4) {
-		si_flush_gfx_cs(sctx, PIPE_FLUSH_ASYNC, NULL);
+		si_flush_gfx_cs(sctx, RADEON_FLUSH_ASYNC_START_NEXT_GFX_IB_NOW, NULL);
 		sctx->num_alloc_tex_transfer_bytes = 0;
 	}
 

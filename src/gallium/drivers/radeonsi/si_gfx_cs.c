@@ -47,7 +47,7 @@ void si_need_gfx_cs_space(struct si_context *ctx)
 						   ctx->vram, ctx->gtt))) {
 		ctx->gtt = 0;
 		ctx->vram = 0;
-		si_flush_gfx_cs(ctx, PIPE_FLUSH_ASYNC, NULL);
+		si_flush_gfx_cs(ctx, RADEON_FLUSH_ASYNC_START_NEXT_GFX_IB_NOW, NULL);
 		return;
 	}
 	ctx->gtt = 0;
@@ -61,7 +61,7 @@ void si_need_gfx_cs_space(struct si_context *ctx)
 	 */
 	unsigned need_dwords = 2048 + ctx->num_cs_dw_queries_suspend;
 	if (!ctx->ws->cs_check_space(cs, need_dwords))
-		si_flush_gfx_cs(ctx, PIPE_FLUSH_ASYNC, NULL);
+		si_flush_gfx_cs(ctx, RADEON_FLUSH_ASYNC_START_NEXT_GFX_IB_NOW, NULL);
 }
 
 void si_flush_gfx_cs(struct si_context *ctx, unsigned flags,

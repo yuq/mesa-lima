@@ -374,7 +374,10 @@ static boolean si_fence_finish(struct pipe_screen *screen,
 			 * not going to wait.
 			 */
 			threaded_context_unwrap_sync(ctx);
-			si_flush_gfx_cs(sctx, timeout ? 0 : PIPE_FLUSH_ASYNC, NULL);
+			si_flush_gfx_cs(sctx,
+					(timeout ? 0 : PIPE_FLUSH_ASYNC) |
+					 RADEON_FLUSH_START_NEXT_GFX_IB_NOW,
+					NULL);
 			rfence->gfx_unflushed.ctx = NULL;
 
 			if (!timeout)

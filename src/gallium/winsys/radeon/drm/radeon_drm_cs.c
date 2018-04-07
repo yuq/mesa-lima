@@ -407,7 +407,8 @@ static bool radeon_drm_cs_validate(struct radeon_winsys_cs *rcs)
 
         /* Flush if there are any relocs. Clean up otherwise. */
         if (cs->csc->num_relocs) {
-            cs->flush_cs(cs->flush_data, PIPE_FLUSH_ASYNC, NULL);
+            cs->flush_cs(cs->flush_data,
+			 RADEON_FLUSH_ASYNC_START_NEXT_GFX_IB_NOW, NULL);
         } else {
             radeon_cs_context_cleanup(cs->csc);
             cs->base.used_vram = 0;

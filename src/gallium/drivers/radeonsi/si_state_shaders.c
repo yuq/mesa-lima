@@ -2774,7 +2774,7 @@ static bool si_update_gs_ring_buffers(struct si_context *sctx)
 
 	/* Flush the context to re-emit both init_config states. */
 	sctx->initial_gfx_cs_size = 0; /* force flush */
-	si_flush_gfx_cs(sctx, PIPE_FLUSH_ASYNC, NULL);
+	si_flush_gfx_cs(sctx, RADEON_FLUSH_ASYNC_START_NEXT_GFX_IB_NOW, NULL);
 
 	/* Set ring bindings. */
 	if (sctx->esgs_ring) {
@@ -3051,7 +3051,7 @@ static void si_init_tess_factor_ring(struct si_context *sctx)
 	 */
 	si_pm4_upload_indirect_buffer(sctx, sctx->init_config);
 	sctx->initial_gfx_cs_size = 0; /* force flush */
-	si_flush_gfx_cs(sctx, PIPE_FLUSH_ASYNC, NULL);
+	si_flush_gfx_cs(sctx, RADEON_FLUSH_ASYNC_START_NEXT_GFX_IB_NOW, NULL);
 }
 
 /**

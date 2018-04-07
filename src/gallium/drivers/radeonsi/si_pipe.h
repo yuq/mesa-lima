@@ -1340,7 +1340,7 @@ radeon_add_to_gfx_buffer_list_check_mem(struct si_context *sctx,
 	    !radeon_cs_memory_below_limit(sctx->screen, sctx->gfx_cs,
 					  sctx->vram + rbo->vram_usage,
 					  sctx->gtt + rbo->gart_usage))
-		si_flush_gfx_cs(sctx, PIPE_FLUSH_ASYNC, NULL);
+		si_flush_gfx_cs(sctx, RADEON_FLUSH_ASYNC_START_NEXT_GFX_IB_NOW, NULL);
 
 	radeon_add_to_buffer_list(sctx, sctx->gfx_cs, rbo, usage, priority);
 }

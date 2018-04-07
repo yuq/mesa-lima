@@ -58,7 +58,7 @@ void si_need_dma_space(struct si_context *ctx, unsigned num_dw,
 	     (src &&
 	      ctx->ws->cs_is_buffer_referenced(ctx->gfx_cs, src->buf,
 						 RADEON_USAGE_WRITE))))
-		si_flush_gfx_cs(ctx, PIPE_FLUSH_ASYNC, NULL);
+		si_flush_gfx_cs(ctx, RADEON_FLUSH_ASYNC_START_NEXT_GFX_IB_NOW, NULL);
 
 	/* Flush if there's not enough space, or if the memory usage per IB
 	 * is too large.

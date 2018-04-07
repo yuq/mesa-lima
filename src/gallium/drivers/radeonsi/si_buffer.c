@@ -64,10 +64,10 @@ void *si_buffer_map_sync_with_rings(struct si_context *sctx,
 	    sctx->ws->cs_is_buffer_referenced(sctx->gfx_cs,
 						resource->buf, rusage)) {
 		if (usage & PIPE_TRANSFER_DONTBLOCK) {
-			si_flush_gfx_cs(sctx, PIPE_FLUSH_ASYNC, NULL);
+			si_flush_gfx_cs(sctx, RADEON_FLUSH_ASYNC_START_NEXT_GFX_IB_NOW, NULL);
 			return NULL;
 		} else {
-			si_flush_gfx_cs(sctx, 0, NULL);
+			si_flush_gfx_cs(sctx, RADEON_FLUSH_ASYNC_START_NEXT_GFX_IB_NOW, NULL);
 			busy = true;
 		}
 	}
@@ -725,7 +725,7 @@ static bool si_resource_commit(struct pipe_context *pctx,
 	if (radeon_emitted(ctx->gfx_cs, ctx->initial_gfx_cs_size) &&
 	    ctx->ws->cs_is_buffer_referenced(ctx->gfx_cs,
 					       res->buf, RADEON_USAGE_READWRITE)) {
-		si_flush_gfx_cs(ctx, PIPE_FLUSH_ASYNC, NULL);
+		si_flush_gfx_cs(ctx, RADEON_FLUSH_ASYNC_START_NEXT_GFX_IB_NOW, NULL);
 	}
 	if (radeon_emitted(ctx->dma_cs, 0) &&
 	    ctx->ws->cs_is_buffer_referenced(ctx->dma_cs,
