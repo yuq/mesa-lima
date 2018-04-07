@@ -57,6 +57,7 @@ gen_batch_decode_ctx_finish(struct gen_batch_decode_ctx *ctx)
 }
 
 #define CSI "\e["
+#define RED_COLOR    CSI "31m"
 #define BLUE_HEADER  CSI "0;44m"
 #define GREEN_HEADER CSI "1;42m"
 #define NORMAL       CSI "0m"
@@ -734,14 +735,23 @@ gen_print_batch(struct gen_batch_decode_ctx *ctx,
       length = gen_group_get_length(inst, p);
       assert(inst == NULL || length > 0);
       length = MAX2(1, length);
+
+      const char *reset_color = ctx->flags & GEN_BATCH_DECODE_IN_COLOR ? NORMAL : "";
+
+      uint64_t offset;
+      if (ctx->flags & GEN_BATCH_DECODE_OFFSETS)
+         offset = batch_addr + ((char *)p - (char *)batch);
+      else
+         offset = 0;
+
       if (inst == NULL) {
-         fprintf(ctx->fp, "unknown instruction %08x\n", p[0]);
+         fprintf(ctx->fp, "%s0x%08"PRIx64": unknown instruction %08x%s\n",
+                 (ctx->flags & GEN_BATCH_DECODE_IN_COLOR) ? RED_COLOR : "",
+                 offset, p[0], reset_color);
          continue;
       }
 
-      const char *color, *reset_color;
-      uint64_t offset;
-
+      const char *color;
       const char *inst_name = gen_group_get_name(inst);
       if (ctx->flags & GEN_BATCH_DECODE_IN_COLOR) {
          reset_color = NORMAL;
@@ -758,11 +768,6 @@ gen_print_batch(struct gen_batch_decode_ctx *ctx,
          color = "";
          reset_color = "";
       }
-
-      if (ctx->flags & GEN_BATCH_DECODE_OFFSETS)
-         offset = batch_addr + ((char *)p - (char *)batch);
-      else
-         offset = 0;
 
       fprintf(ctx->fp, "%s0x%08"PRIx64":  0x%08x:  %-80s%s\n",
               color, offset, p[0], inst_name, reset_color);
