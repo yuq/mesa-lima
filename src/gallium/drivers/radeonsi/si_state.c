@@ -265,11 +265,6 @@ static void si_emit_cb_render_state(struct si_context *sctx, struct r600_atom *a
 		radeon_emit(cs, sx_ps_downconvert);	/* R_028754_SX_PS_DOWNCONVERT */
 		radeon_emit(cs, sx_blend_opt_epsilon);	/* R_028758_SX_BLEND_OPT_EPSILON */
 		radeon_emit(cs, sx_blend_opt_control);	/* R_02875C_SX_BLEND_OPT_CONTROL */
-	} else if (sctx->screen->has_rbplus) {
-		radeon_set_context_reg_seq(cs, R_028754_SX_PS_DOWNCONVERT, 3);
-		radeon_emit(cs, 0);	/* R_028754_SX_PS_DOWNCONVERT */
-		radeon_emit(cs, 0);	/* R_028758_SX_BLEND_OPT_EPSILON */
-		radeon_emit(cs, 0);	/* R_02875C_SX_BLEND_OPT_CONTROL */
 	}
 }
 
@@ -628,7 +623,7 @@ static void *si_create_blend_state_mode(struct pipe_context *ctx,
 		color_control |= S_028808_MODE(V_028808_CB_DISABLE);
 	}
 
-	if (sctx->screen->has_rbplus) {
+	if (sctx->screen->rbplus_allowed) {
 		/* Disable RB+ blend optimizations for dual source blending.
 		 * Vulkan does this.
 		 */
