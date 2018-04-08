@@ -43,6 +43,7 @@
 #define VG(x)
 #endif
 
+#include "c11/threads.h"
 #include <amdgpu.h>
 #include "compiler/shader_enums.h"
 #include "util/macros.h"

@@ -41,7 +41,6 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "main/fbobject.h"
 #include "util/simple_list.h"
 #include "main/state.h"
-#include "main/core.h"
 #include "main/stencil.h"
 #include "main/viewport.h"
 

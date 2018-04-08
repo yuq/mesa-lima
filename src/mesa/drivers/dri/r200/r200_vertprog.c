@@ -30,6 +30,8 @@ USE OR OTHER DEALINGS IN THE SOFTWARE.
  *   Aapo Tahkola <aet@rasterburn.org>
  *   Roland Scheidegger <rscheidegger_lists@hispeed.ch>
  */
+
+#include "main/errors.h"
 #include "main/glheader.h"
 #include "main/macros.h"
 #include "main/enums.h"

@@ -31,7 +31,6 @@
 
 
 #include <stdio.h>
-#include "main/core.h"
 #include <GL/glx.h>
 
 

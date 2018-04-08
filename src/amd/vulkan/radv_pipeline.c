@@ -48,6 +48,7 @@
 #include "util/debug.h"
 #include "ac_exp_param.h"
 #include "ac_shader_util.h"
+#include "main/menums.h"
 
 struct radv_blend_state {
 	uint32_t blend_enable_4bit;

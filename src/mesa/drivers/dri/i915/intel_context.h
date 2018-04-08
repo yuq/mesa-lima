@@ -32,6 +32,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include "main/mtypes.h"
+#include "main/errors.h"
 
 #include <drm.h>
 #include <intel_bufmgr.h>

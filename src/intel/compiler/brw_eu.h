@@ -34,6 +34,7 @@
 #define BRW_EU_H
 
 #include <stdbool.h>
+#include <stdio.h>
 #include "brw_inst.h"
 #include "brw_eu_defines.h"
 #include "brw_reg.h"

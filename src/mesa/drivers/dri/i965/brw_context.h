@@ -36,6 +36,7 @@
 #include <stdbool.h>
 #include "main/macros.h"
 #include "main/mtypes.h"
+#include "main/errors.h"
 #include "vbo/vbo.h"
 #include "brw_structs.h"
 #include "brw_pipe_control.h"
