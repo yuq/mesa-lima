@@ -2958,7 +2958,7 @@ radv_emit_draw_packets(struct radv_cmd_buffer *cmd_buffer,
 		}
 
 		if (state->last_num_instances != info->instance_count) {
-			radeon_emit(cs, PKT3(PKT3_NUM_INSTANCES, 0, state->predicating));
+			radeon_emit(cs, PKT3(PKT3_NUM_INSTANCES, 0, false));
 			radeon_emit(cs, info->instance_count);
 			state->last_num_instances = info->instance_count;
 		}
