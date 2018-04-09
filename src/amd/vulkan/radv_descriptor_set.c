@@ -45,6 +45,27 @@ static bool has_equal_immutable_samplers(const VkSampler *samplers, uint32_t cou
 	return true;
 }
 
+static int binding_compare(const void* av, const void *bv)
+{
+	const VkDescriptorSetLayoutBinding *a = (const VkDescriptorSetLayoutBinding*)av;
+	const VkDescriptorSetLayoutBinding *b = (const VkDescriptorSetLayoutBinding*)bv;
+
+	return (a->binding < b->binding) ? -1 : (a->binding > b->binding) ? 1 : 0;
+}
+
+static VkDescriptorSetLayoutBinding *
+create_sorted_bindings(const VkDescriptorSetLayoutBinding *bindings, unsigned count) {
+	VkDescriptorSetLayoutBinding *sorted_bindings = malloc(count * sizeof(VkDescriptorSetLayoutBinding));
+	if (!sorted_bindings)
+		return NULL;
+
+	memcpy(sorted_bindings, bindings, count * sizeof(VkDescriptorSetLayoutBinding));
+
+	qsort(sorted_bindings, count, sizeof(VkDescriptorSetLayoutBinding), binding_compare);
+
+	return sorted_bindings;
+}
+
 VkResult radv_CreateDescriptorSetLayout(
 	VkDevice                                    _device,
 	const VkDescriptorSetLayoutCreateInfo*      pCreateInfo,
@@ -78,6 +99,13 @@ VkResult radv_CreateDescriptorSetLayout(
 	/* We just allocate all the samplers at the end of the struct */
 	uint32_t *samplers = (uint32_t*)&set_layout->binding[max_binding + 1];
 
+	VkDescriptorSetLayoutBinding *bindings = create_sorted_bindings(pCreateInfo->pBindings,
+	                                                                pCreateInfo->bindingCount);
+	if (!bindings) {
+		vk_free2(&device->alloc, pAllocator, set_layout);
+		return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+	}
+
 	set_layout->binding_count = max_binding + 1;
 	set_layout->shader_stages = 0;
 	set_layout->dynamic_shader_stages = 0;
@@ -89,7 +117,7 @@ VkResult radv_CreateDescriptorSetLayout(
 	uint32_t dynamic_offset_count = 0;
 
 	for (uint32_t j = 0; j < pCreateInfo->bindingCount; j++) {
-		const VkDescriptorSetLayoutBinding *binding = &pCreateInfo->pBindings[j];
+		const VkDescriptorSetLayoutBinding *binding = bindings + j;
 		uint32_t b = binding->binding;
 		uint32_t alignment;
 
@@ -163,6 +191,8 @@ VkResult radv_CreateDescriptorSetLayout(
 		set_layout->shader_stages |= binding->stageFlags;
 	}
 
+	free(bindings);
+
 	set_layout->dynamic_offset_count = dynamic_offset_count;
 
 	*pSetLayout = radv_descriptor_set_layout_to_handle(set_layout);
@@ -188,10 +218,17 @@ void radv_GetDescriptorSetLayoutSupport(VkDevice device,
                                         const VkDescriptorSetLayoutCreateInfo* pCreateInfo,
                                         VkDescriptorSetLayoutSupport* pSupport)
 {
+	VkDescriptorSetLayoutBinding *bindings = create_sorted_bindings(pCreateInfo->pBindings,
+	                                                                pCreateInfo->bindingCount);
+	if (!bindings) {
+		pSupport->supported = false;
+		return;
+	}
+
 	bool supported = true;
 	uint64_t size = 0;
 	for (uint32_t i = 0; i < pCreateInfo->bindingCount; i++) {
-		const VkDescriptorSetLayoutBinding *binding = &pCreateInfo->pBindings[i];
+		const VkDescriptorSetLayoutBinding *binding = bindings + i;
 
 		if (binding->descriptorCount == 0)
 			continue;
@@ -243,6 +280,8 @@ void radv_GetDescriptorSetLayoutSupport(VkDevice device,
 		}
 		size += binding->descriptorCount * descriptor_size;
 	}
+
+	free(bindings);
 
 	pSupport->supported = supported;
 }
