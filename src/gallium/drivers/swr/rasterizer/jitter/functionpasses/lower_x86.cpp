@@ -72,7 +72,6 @@ namespace SwrJit
     // Map of intrinsics that haven't been moved to the new mechanism yet. If used, these get the previous behavior of
     // mapping directly to avx/avx2 intrinsics.
     static std::map<std::string, Intrinsic::ID> intrinsicMap = {
-        {"meta.intrinsic.VROUND",          Intrinsic::x86_avx_round_ps_256},
         {"meta.intrinsic.BEXTR_32",        Intrinsic::x86_bmi_bextr_32},
         {"meta.intrinsic.VPSHUFB",         Intrinsic::x86_avx2_pshuf_b},
         {"meta.intrinsic.VCVTPS2PH",       Intrinsic::x86_vcvtps2ph_256},
@@ -90,6 +89,8 @@ namespace SwrJit
     Instruction* NO_EMU(LowerX86* pThis, TargetArch arch, TargetWidth width, CallInst* pCallInst);
     Instruction* VPERM_EMU(LowerX86* pThis, TargetArch arch, TargetWidth width, CallInst* pCallInst);
     Instruction* VGATHER_EMU(LowerX86* pThis, TargetArch arch, TargetWidth width, CallInst* pCallInst);
+    Instruction* VROUND_EMU(LowerX86* pThis, TargetArch arch, TargetWidth width, CallInst* pCallInst);
+
     Instruction* DOUBLE_EMU(LowerX86* pThis, TargetArch arch, TargetWidth width, CallInst* pCallInst, Intrinsic::ID intrin);
     
     static Intrinsic::ID DOUBLE = (Intrinsic::ID)-1;
@@ -105,6 +106,7 @@ namespace SwrJit
         {"meta.intrinsic.VGATHERDD",   {{Intrinsic::not_intrinsic,                   Intrinsic::not_intrinsic},                      VGATHER_EMU}},
         {"meta.intrinsic.VCVTPD2PS",   {{Intrinsic::x86_avx_cvt_pd2_ps_256,          Intrinsic::not_intrinsic},                      NO_EMU}},
         {"meta.intrinsic.VCVTPH2PS",   {{Intrinsic::x86_vcvtph2ps_256,               Intrinsic::not_intrinsic},                      NO_EMU}},
+        {"meta.intrinsic.VROUND",      {{Intrinsic::x86_avx_round_ps_256,            DOUBLE},                                        NO_EMU}},
     },
     {   // AVX2
         {"meta.intrinsic.VRCPPS",      {{Intrinsic::x86_avx_rcp_ps_256,              DOUBLE},                                        NO_EMU}},
@@ -115,6 +117,7 @@ namespace SwrJit
         {"meta.intrinsic.VGATHERDD",   {{Intrinsic::not_intrinsic,                   Intrinsic::not_intrinsic},                      VGATHER_EMU}},
         {"meta.intrinsic.VCVTPD2PS",   {{Intrinsic::x86_avx_cvt_pd2_ps_256,          Intrinsic::not_intrinsic},                      NO_EMU}},
         {"meta.intrinsic.VCVTPH2PS",   {{Intrinsic::x86_vcvtph2ps_256,               Intrinsic::not_intrinsic},                      NO_EMU}},
+        {"meta.intrinsic.VROUND",      {{Intrinsic::x86_avx_round_ps_256,            DOUBLE},                                        NO_EMU}},
     },
     {   // AVX512
         {"meta.intrinsic.VRCPPS",      {{Intrinsic::x86_avx512_rcp14_ps_256,         Intrinsic::x86_avx512_rcp14_ps_512},            NO_EMU}},
@@ -125,6 +128,7 @@ namespace SwrJit
         {"meta.intrinsic.VGATHERDD",   {{Intrinsic::not_intrinsic,                   Intrinsic::not_intrinsic},                      VGATHER_EMU}},
         {"meta.intrinsic.VCVTPD2PS",   {{Intrinsic::x86_avx512_mask_cvtpd2ps_256,    Intrinsic::x86_avx512_mask_cvtpd2ps_512 },      NO_EMU}},
         {"meta.intrinsic.VCVTPH2PS",   {{Intrinsic::x86_avx512_mask_vcvtph2ps_256,   Intrinsic::x86_avx512_mask_vcvtph2ps_512 },     NO_EMU}},
+        {"meta.intrinsic.VROUND",      {{Intrinsic::not_intrinsic,                   Intrinsic::not_intrinsic },                     VROUND_EMU}},
     }
     };
 
@@ -497,6 +501,38 @@ namespace SwrJit
         }
 
         return cast<Instruction>(v32Gather);
+    }
+
+    // No support for vroundps in avx512 (it is available in kncni), so emulate with avx instructions
+    Instruction* VROUND_EMU(LowerX86* pThis, TargetArch arch, TargetWidth width, CallInst* pCallInst)
+    {
+        SWR_ASSERT(arch == AVX512);
+
+        auto B = pThis->B;
+        auto vf32Src = pCallInst->getOperand(0);
+        auto i8Round = pCallInst->getOperand(1);
+        auto pfnFunc = Intrinsic::getDeclaration(B->JM()->mpCurrentModule, Intrinsic::x86_avx_round_ps_256);
+
+        if (width == W256)
+        {
+            return cast<Instruction>(B->CALL2(pfnFunc, vf32Src, i8Round));
+        }
+        else if (width == W512)
+        {
+            auto v8f32SrcLo = B->EXTRACT_16(vf32Src, 0);
+            auto v8f32SrcHi = B->EXTRACT_16(vf32Src, 1);
+
+            auto v8f32ResLo = B->CALL2(pfnFunc, v8f32SrcLo, i8Round);
+            auto v8f32ResHi = B->CALL2(pfnFunc, v8f32SrcHi, i8Round);
+
+            return cast<Instruction>(B->JOIN_16(v8f32ResLo, v8f32ResHi));
+        }
+        else
+        {
+            SWR_ASSERT(false, "Unimplemented vector width.");
+        }
+
+        return nullptr;
     }
 
     // Double pump input using Intrin template arg. This blindly extracts lower and upper 256 from each vector argument and
