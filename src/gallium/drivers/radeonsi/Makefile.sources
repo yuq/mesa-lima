@@ -7,6 +7,7 @@ C_SOURCES := \
 	driinfo_radeonsi.h \
 	si_blit.c \
 	si_buffer.c \
+	si_build_pm4.h \
 	si_clear.c \
 	si_compute.c \
 	si_compute.h \
