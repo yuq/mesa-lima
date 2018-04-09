@@ -564,18 +564,18 @@ static void si_setup_user_sgprs_co_v2(struct si_context *sctx,
 		/* Upload dispatch ptr */
 		memset(&dispatch, 0, sizeof(dispatch));
 
-		dispatch.workgroup_size_x = info->block[0];
-		dispatch.workgroup_size_y = info->block[1];
-		dispatch.workgroup_size_z = info->block[2];
+		dispatch.workgroup_size_x = util_cpu_to_le16(info->block[0]);
+		dispatch.workgroup_size_y = util_cpu_to_le16(info->block[1]);
+		dispatch.workgroup_size_z = util_cpu_to_le16(info->block[2]);
 
-		dispatch.grid_size_x = info->grid[0] * info->block[0];
-		dispatch.grid_size_y = info->grid[1] * info->block[1];
-		dispatch.grid_size_z = info->grid[2] * info->block[2];
+		dispatch.grid_size_x = util_cpu_to_le32(info->grid[0] * info->block[0]);
+		dispatch.grid_size_y = util_cpu_to_le32(info->grid[1] * info->block[1]);
+		dispatch.grid_size_z = util_cpu_to_le32(info->grid[2] * info->block[2]);
 
-		dispatch.private_segment_size = program->private_size;
-		dispatch.group_segment_size = program->local_size;
+		dispatch.private_segment_size = util_cpu_to_le32(program->private_size);
+		dispatch.group_segment_size = util_cpu_to_le32(program->local_size);
 
-		dispatch.kernarg_address = kernel_args_va;
+		dispatch.kernarg_address = util_cpu_to_le64(kernel_args_va);
 
 		u_upload_data(sctx->b.const_uploader, 0, sizeof(dispatch),
                               256, &dispatch, &dispatch_offset,
@@ -652,9 +652,9 @@ static bool si_upload_compute_input(struct si_context *sctx,
 
 	if (!code_object) {
 		for (i = 0; i < 3; i++) {
-			kernel_args[i] = info->grid[i];
-			kernel_args[i + 3] = info->grid[i] * info->block[i];
-			kernel_args[i + 6] = info->block[i];
+			kernel_args[i] = util_cpu_to_le32(info->grid[i]);
+			kernel_args[i + 3] = util_cpu_to_le32(info->grid[i] * info->block[i]);
+			kernel_args[i + 6] = util_cpu_to_le32(info->block[i]);
 		}
 	}
 
