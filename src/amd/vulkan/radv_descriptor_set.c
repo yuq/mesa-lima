@@ -30,6 +30,7 @@
 #include "util/mesa-sha1.h"
 #include "radv_private.h"
 #include "sid.h"
+#include "vk_util.h"
 
 
 static bool has_equal_immutable_samplers(const VkSampler *samplers, uint32_t count)
@@ -76,6 +77,8 @@ VkResult radv_CreateDescriptorSetLayout(
 	struct radv_descriptor_set_layout *set_layout;
 
 	assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO);
+	const VkDescriptorSetLayoutBindingFlagsCreateInfoEXT *variable_flags =
+		vk_find_struct_const(pCreateInfo->pNext, DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO_EXT);
 
 	uint32_t max_binding = 0;
 	uint32_t immutable_sampler_count = 0;
@@ -164,6 +167,14 @@ VkResult radv_CreateDescriptorSetLayout(
 		set_layout->binding[b].offset = set_layout->size;
 		set_layout->binding[b].dynamic_offset_offset = dynamic_offset_count;
 
+		if (variable_flags && binding->binding < variable_flags->bindingCount &&
+		    (variable_flags->pBindingFlags[binding->binding] & VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT_EXT)) {
+			assert(!binding->pImmutableSamplers); /* Terribly ill defined  how many samplers are valid */
+			assert(binding->binding == max_binding);
+
+			set_layout->has_variable_descriptors = true;
+		}
+
 		if (binding->pImmutableSamplers) {
 			set_layout->binding[b].immutable_samplers_offset = samplers_offset;
 			set_layout->binding[b].immutable_samplers_equal =
@@ -225,6 +236,14 @@ void radv_GetDescriptorSetLayoutSupport(VkDevice device,
 		return;
 	}
 
+	const VkDescriptorSetLayoutBindingFlagsCreateInfoEXT *variable_flags =
+		vk_find_struct_const(pCreateInfo->pNext, DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO_EXT);
+	VkDescriptorSetVariableDescriptorCountLayoutSupportEXT *variable_count =
+		vk_find_struct((void*)pCreateInfo->pNext, DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_LAYOUT_SUPPORT_EXT);
+	if (variable_count) {
+		variable_count->maxVariableDescriptorCount = 0;
+	}
+
 	bool supported = true;
 	uint64_t size = 0;
 	for (uint32_t i = 0; i < pCreateInfo->bindingCount; i++) {
@@ -272,8 +291,17 @@ void radv_GetDescriptorSetLayoutSupport(VkDevice device,
 			supported = false;
 		}
 		size = align_u64(size, descriptor_alignment);
-		if (descriptor_size && (UINT64_MAX - size) / descriptor_size < binding->descriptorCount) {
+
+		uint64_t max_count = UINT64_MAX;
+		if (descriptor_size)
+			max_count = (UINT64_MAX - size) / descriptor_size;
+
+		if (max_count < binding->descriptorCount) {
 			supported = false;
+		}
+		if (variable_flags && binding->binding <variable_flags->bindingCount && variable_count &&
+		    (variable_flags->pBindingFlags[binding->binding] & VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT_EXT)) {
+			variable_count->maxVariableDescriptorCount = MIN2(UINT32_MAX, max_count);
 		}
 		size += binding->descriptorCount * descriptor_size;
 	}
