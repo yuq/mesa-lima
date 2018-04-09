@@ -2599,20 +2599,9 @@ void radv_CmdExecuteCommands(
 				secondary->state.last_ia_multi_vgt_param;
 		}
 
-		if (secondary->state.last_first_instance != -1) {
-			primary->state.last_first_instance =
-				secondary->state.last_first_instance;
-		}
-
-		if (secondary->state.last_num_instances != -1) {
-			primary->state.last_num_instances =
-				secondary->state.last_num_instances;
-		}
-
-		if (secondary->state.last_vertex_offset != -1) {
-			primary->state.last_vertex_offset =
-				secondary->state.last_vertex_offset;
-		}
+		primary->state.last_first_instance = secondary->state.last_first_instance;
+		primary->state.last_num_instances = secondary->state.last_num_instances;
+		primary->state.last_vertex_offset = secondary->state.last_vertex_offset;
 
 		if (secondary->state.last_index_type != -1) {
 			primary->state.last_index_type =
