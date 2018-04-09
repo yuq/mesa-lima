@@ -464,6 +464,7 @@ struct si_shader_ctx_state {
  */
 union si_vgt_param_key {
 	struct {
+#ifdef PIPE_ARCH_LITTLE_ENDIAN
 		unsigned prim:4;
 		unsigned uses_instancing:1;
 		unsigned multi_instances_smaller_than_primgroup:1;
@@ -474,6 +475,18 @@ union si_vgt_param_key {
 		unsigned tess_uses_prim_id:1;
 		unsigned uses_gs:1;
 		unsigned _pad:32 - SI_NUM_VGT_PARAM_KEY_BITS;
+#else /* PIPE_ARCH_BIG_ENDIAN */
+		unsigned _pad:32 - SI_NUM_VGT_PARAM_KEY_BITS;
+		unsigned uses_gs:1;
+		unsigned tess_uses_prim_id:1;
+		unsigned uses_tess:1;
+		unsigned line_stipple_enabled:1;
+		unsigned count_from_stream_output:1;
+		unsigned primitive_restart:1;
+		unsigned multi_instances_smaller_than_primgroup:1;
+		unsigned uses_instancing:1;
+		unsigned prim:4;
+#endif
 	} u;
 	uint32_t index;
 };
