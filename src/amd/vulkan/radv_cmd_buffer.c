@@ -3083,7 +3083,7 @@ radv_draw(struct radv_cmd_buffer *cmd_buffer,
 		 */
 		si_emit_cache_flush(cmd_buffer);
 
-		if (cmd_buffer->state.prefetch_L2_mask) {
+		if (has_prefetch && cmd_buffer->state.prefetch_L2_mask) {
 			/* Only prefetch the vertex shader and VBO descriptors
 			 * in order to start the draw as soon as possible.
 			 */
