@@ -598,6 +598,12 @@ struct radv_queue {
 	struct radeon_winsys_cs *continue_preamble_cs;
 };
 
+struct radv_bo_list {
+	struct radv_winsys_bo_list list;
+	unsigned capacity;
+	pthread_mutex_t mutex;
+};
+
 struct radv_device {
 	VK_LOADER_DATA                              _loader_data;
 
@@ -660,6 +666,8 @@ struct radv_device {
 	uint64_t dmesg_timestamp;
 
 	struct radv_device_extension_table enabled_extensions;
+
+	struct radv_bo_list bo_list;
 };
 
 struct radv_device_memory {

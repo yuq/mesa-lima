@@ -1221,6 +1221,55 @@ radv_queue_finish(struct radv_queue *queue)
 }
 
 static void
+radv_bo_list_init(struct radv_bo_list *bo_list)
+{
+	pthread_mutex_init(&bo_list->mutex, NULL);
+	bo_list->list.count = bo_list->capacity = 0;
+	bo_list->list.bos = NULL;
+}
+
+static void
+radv_bo_list_finish(struct radv_bo_list *bo_list)
+{
+	free(bo_list->list.bos);
+	pthread_mutex_destroy(&bo_list->mutex);
+}
+
+static VkResult radv_bo_list_add(struct radv_bo_list *bo_list, struct radeon_winsys_bo *bo)
+{
+	pthread_mutex_lock(&bo_list->mutex);
+	if (bo_list->list.count == bo_list->capacity) {
+		unsigned capacity = MAX2(4, bo_list->capacity * 2);
+		void *data = realloc(bo_list->list.bos, capacity * sizeof(struct radeon_winsys_bo*));
+
+		if (!data) {
+			pthread_mutex_unlock(&bo_list->mutex);
+			return VK_ERROR_OUT_OF_HOST_MEMORY;
+		}
+
+		bo_list->list.bos = (struct radeon_winsys_bo**)data;
+		bo_list->capacity = capacity;
+	}
+
+	bo_list->list.bos[bo_list->list.count++] = bo;
+	pthread_mutex_unlock(&bo_list->mutex);
+	return VK_SUCCESS;
+}
+
+static void radv_bo_list_remove(struct radv_bo_list *bo_list, struct radeon_winsys_bo *bo)
+{
+	pthread_mutex_lock(&bo_list->mutex);
+	for(unsigned i = 0; i < bo_list->list.count; ++i) {
+		if (bo_list->list.bos[i] == bo) {
+			bo_list->list.bos[i] = bo_list->list.bos[bo_list->list.count - 1];
+			--bo_list->list.count;
+			break;
+		}
+	}
+	pthread_mutex_unlock(&bo_list->mutex);
+}
+
+static void
 radv_device_init_gs_info(struct radv_device *device)
 {
 	switch (device->physical_device->rad_info.family) {
@@ -1319,6 +1368,8 @@ VkResult radv_CreateDevice(
 
 	mtx_init(&device->shader_slab_mutex, mtx_plain);
 	list_inithead(&device->shader_slabs);
+
+	radv_bo_list_init(&device->bo_list);
 
 	for (unsigned i = 0; i < pCreateInfo->queueCreateInfoCount; i++) {
 		const VkDeviceQueueCreateInfo *queue_create = &pCreateInfo->pQueueCreateInfos[i];
@@ -1452,6 +1503,8 @@ VkResult radv_CreateDevice(
 fail_meta:
 	radv_device_finish_meta(device);
 fail:
+	radv_bo_list_finish(&device->bo_list);
+
 	if (device->trace_bo)
 		device->ws->buffer_destroy(device->trace_bo);
 
@@ -1499,6 +1552,7 @@ void radv_DestroyDevice(
 
 	radv_destroy_shader_slabs(device);
 
+	radv_bo_list_finish(&device->bo_list);
 	vk_free(&device->alloc, device);
 }
 
@@ -2269,7 +2323,7 @@ static VkResult radv_signal_fence(struct radv_queue *queue,
 
 	ret = queue->device->ws->cs_submit(queue->hw_ctx, queue->queue_idx,
 	                                   &queue->device->empty_cs[queue->queue_family_index],
-	                                   1, NULL, NULL, &sem_info,
+	                                   1, NULL, NULL, &sem_info, NULL,
 	                                   false, fence->fence);
 	radv_free_sem_info(&sem_info);
 
@@ -2346,7 +2400,7 @@ VkResult radv_QueueSubmit(
 				ret = queue->device->ws->cs_submit(ctx, queue->queue_idx,
 								   &queue->device->empty_cs[queue->queue_family_index],
 								   1, NULL, NULL,
-								   &sem_info,
+								   &sem_info, NULL,
 								   false, base_fence);
 				if (ret) {
 					radv_loge("failed to submit CS %d\n", i);
@@ -2384,10 +2438,14 @@ VkResult radv_QueueSubmit(
 			sem_info.cs_emit_wait = j == 0;
 			sem_info.cs_emit_signal = j + advance == pSubmits[i].commandBufferCount;
 
+			pthread_mutex_lock(&queue->device->bo_list.mutex);
+
 			ret = queue->device->ws->cs_submit(ctx, queue->queue_idx, cs_array + j,
 							advance, initial_preamble, continue_preamble_cs,
-							   &sem_info,
+							&sem_info, &queue->device->bo_list.list,
 							can_patch, base_fence);
+
+			pthread_mutex_unlock(&queue->device->bo_list.mutex);
 
 			if (ret) {
 				radv_loge("failed to submit CS %d\n", i);
@@ -2594,11 +2652,8 @@ static VkResult radv_alloc_memory(struct radv_device *device,
 			goto fail;
 		} else {
 			close(import_info->fd);
-			goto out_success;
 		}
-	}
-
-	if (host_ptr_info) {
+	} else if (host_ptr_info) {
 		assert(host_ptr_info->handleType == VK_EXTERNAL_MEMORY_HANDLE_TYPE_HOST_ALLOCATION_BIT_EXT);
 		assert(mem_type_index == RADV_MEM_TYPE_GTT_CACHED);
 		mem->bo = device->ws->buffer_from_ptr(device->ws, host_ptr_info->pHostPointer,
@@ -2608,41 +2663,46 @@ static VkResult radv_alloc_memory(struct radv_device *device,
 			goto fail;
 		} else {
 			mem->user_ptr = host_ptr_info->pHostPointer;
-			goto out_success;
 		}
+	} else {
+		uint64_t alloc_size = align_u64(pAllocateInfo->allocationSize, 4096);
+		if (mem_type_index == RADV_MEM_TYPE_GTT_WRITE_COMBINE ||
+		    mem_type_index == RADV_MEM_TYPE_GTT_CACHED)
+			domain = RADEON_DOMAIN_GTT;
+		else
+			domain = RADEON_DOMAIN_VRAM;
+
+		if (mem_type_index == RADV_MEM_TYPE_VRAM)
+			flags |= RADEON_FLAG_NO_CPU_ACCESS;
+		else
+			flags |= RADEON_FLAG_CPU_ACCESS;
+
+		if (mem_type_index == RADV_MEM_TYPE_GTT_WRITE_COMBINE)
+			flags |= RADEON_FLAG_GTT_WC;
+
+		if (!dedicate_info && !import_info && (!export_info || !export_info->handleTypes))
+			flags |= RADEON_FLAG_NO_INTERPROCESS_SHARING;
+
+		mem->bo = device->ws->buffer_create(device->ws, alloc_size, device->physical_device->rad_info.max_alignment,
+		                                    domain, flags);
+
+		if (!mem->bo) {
+			result = VK_ERROR_OUT_OF_DEVICE_MEMORY;
+			goto fail;
+		}
+		mem->type_index = mem_type_index;
 	}
 
-	uint64_t alloc_size = align_u64(pAllocateInfo->allocationSize, 4096);
-	if (mem_type_index == RADV_MEM_TYPE_GTT_WRITE_COMBINE ||
-	    mem_type_index == RADV_MEM_TYPE_GTT_CACHED)
-		domain = RADEON_DOMAIN_GTT;
-	else
-		domain = RADEON_DOMAIN_VRAM;
+	result = radv_bo_list_add(&device->bo_list, mem->bo);
+	if (result != VK_SUCCESS)
+		goto fail_bo;
 
-	if (mem_type_index == RADV_MEM_TYPE_VRAM)
-		flags |= RADEON_FLAG_NO_CPU_ACCESS;
-	else
-		flags |= RADEON_FLAG_CPU_ACCESS;
-
-	if (mem_type_index == RADV_MEM_TYPE_GTT_WRITE_COMBINE)
-		flags |= RADEON_FLAG_GTT_WC;
-
-	if (!dedicate_info && !import_info && (!export_info || !export_info->handleTypes))
-		flags |= RADEON_FLAG_NO_INTERPROCESS_SHARING;
-
-	mem->bo = device->ws->buffer_create(device->ws, alloc_size, device->physical_device->rad_info.max_alignment,
-					       domain, flags);
-
-	if (!mem->bo) {
-		result = VK_ERROR_OUT_OF_DEVICE_MEMORY;
-		goto fail;
-	}
-	mem->type_index = mem_type_index;
-out_success:
 	*pMem = radv_device_memory_to_handle(mem);
 
 	return VK_SUCCESS;
 
+fail_bo:
+	device->ws->buffer_destroy(mem->bo);
 fail:
 	vk_free2(&device->alloc, pAllocator, mem);
 
@@ -2670,6 +2730,7 @@ void radv_FreeMemory(
 	if (mem == NULL)
 		return;
 
+	radv_bo_list_remove(&device->bo_list, mem->bo);
 	device->ws->buffer_destroy(mem->bo);
 	mem->bo = NULL;
 
@@ -2989,7 +3050,7 @@ radv_sparse_image_opaque_bind_memory(struct radv_device *device,
 			queue->device->ws->cs_submit(queue->hw_ctx, queue->queue_idx,
 			                             &queue->device->empty_cs[queue->queue_family_index],
 			                             1, NULL, NULL,
-						     &sem_info,
+						     &sem_info, NULL,
 			                             false, base_fence);
 			fence_emitted = true;
 			if (fence)
