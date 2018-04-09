@@ -230,9 +230,6 @@ void radv_GetDescriptorSetLayoutSupport(VkDevice device,
 	for (uint32_t i = 0; i < pCreateInfo->bindingCount; i++) {
 		const VkDescriptorSetLayoutBinding *binding = bindings + i;
 
-		if (binding->descriptorCount == 0)
-			continue;
-
 		uint64_t descriptor_size = 0;
 		uint64_t descriptor_alignment = 1;
 		switch (binding->descriptorType) {
