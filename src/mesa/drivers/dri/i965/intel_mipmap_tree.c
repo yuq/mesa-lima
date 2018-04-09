@@ -2877,8 +2877,7 @@ intel_miptree_make_shareable(struct brw_context *brw,
                                 ISL_AUX_USAGE_NONE, false);
 
    if (mt->mcs_buf) {
-      brw_bo_unreference(mt->mcs_buf->bo);
-      free(mt->mcs_buf);
+      intel_miptree_aux_buffer_free(mt->mcs_buf);
       mt->mcs_buf = NULL;
 
       /* Any pending MCS/CCS operations are no longer needed. Trying to
