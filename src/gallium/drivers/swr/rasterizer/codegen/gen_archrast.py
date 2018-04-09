@@ -24,7 +24,7 @@ from __future__ import print_function
 import os
 import sys
 import re
-from gen_common import ArgumentParser, MakoTemplateWriter
+from gen_common import *
 
 def parse_event_fields(lines, idx, event_dict):
     field_names = []
@@ -144,6 +144,10 @@ def main():
         print('Error: Could not find private proto file %s' % proto_private_filename, file=sys.stderr)
         return 1
 
+    final_output_dir = output_dir
+    MakeDir(final_output_dir)
+    output_dir = MakeTmpDir('_codegen')
+
     protos = {}
     protos['events'] = {}       # event dictionary containing events with their fields
     protos['event_names'] = []  # needed to keep events in order parsed. dict is not ordered.
@@ -153,53 +157,64 @@ def main():
     parse_protos(protos, proto_filename)
     parse_protos(protos, proto_private_filename)
 
-    # Generate event header
-    if args.gen_event_hpp:
-        curdir = os.path.dirname(os.path.abspath(__file__))
-        template_file = os.sep.join([curdir, 'templates', 'gen_ar_event.hpp'])
-        output_fullpath = os.sep.join([output_dir, output_filename])
+    rval = 0
 
-        MakoTemplateWriter.to_file(template_file, output_fullpath,
-                cmdline=sys.argv,
-                filename=output_filename,
-                protos=protos)
+    try:
+        # Generate event header
+        if args.gen_event_hpp:
+            curdir = os.path.dirname(os.path.abspath(__file__))
+            template_file = os.sep.join([curdir, 'templates', 'gen_ar_event.hpp'])
+            output_fullpath = os.sep.join([output_dir, output_filename])
 
-    # Generate event implementation
-    if args.gen_event_cpp:
-        curdir = os.path.dirname(os.path.abspath(__file__))
-        template_file = os.sep.join([curdir, 'templates', 'gen_ar_event.cpp'])
-        output_fullpath = os.sep.join([output_dir, output_filename])
+            MakoTemplateWriter.to_file(template_file, output_fullpath,
+                    cmdline=sys.argv,
+                    filename=output_filename,
+                    protos=protos)
 
-        MakoTemplateWriter.to_file(template_file, output_fullpath,
-                cmdline=sys.argv,
-                filename=output_filename,
-                protos=protos)
+        # Generate event implementation
+        if args.gen_event_cpp:
+            curdir = os.path.dirname(os.path.abspath(__file__))
+            template_file = os.sep.join([curdir, 'templates', 'gen_ar_event.cpp'])
+            output_fullpath = os.sep.join([output_dir, output_filename])
 
-    # Generate event handler header
-    if args.gen_eventhandler_hpp:
-        curdir = os.path.dirname(os.path.abspath(__file__))
-        template_file = os.sep.join([curdir, 'templates', 'gen_ar_eventhandler.hpp'])
-        output_fullpath = os.sep.join([output_dir, output_filename])
+            MakoTemplateWriter.to_file(template_file, output_fullpath,
+                    cmdline=sys.argv,
+                    filename=output_filename,
+                    protos=protos)
 
-        MakoTemplateWriter.to_file(template_file, output_fullpath,
-                cmdline=sys.argv,
-                filename=output_filename,
-                event_header='gen_ar_event.hpp',
-                protos=protos)
+        # Generate event handler header
+        if args.gen_eventhandler_hpp:
+            curdir = os.path.dirname(os.path.abspath(__file__))
+            template_file = os.sep.join([curdir, 'templates', 'gen_ar_eventhandler.hpp'])
+            output_fullpath = os.sep.join([output_dir, output_filename])
 
-    # Generate event handler header
-    if args.gen_eventhandlerfile_hpp:
-        curdir = os.path.dirname(os.path.abspath(__file__))
-        template_file = os.sep.join([curdir, 'templates', 'gen_ar_eventhandlerfile.hpp'])
-        output_fullpath = os.sep.join([output_dir, output_filename])
+            MakoTemplateWriter.to_file(template_file, output_fullpath,
+                    cmdline=sys.argv,
+                    filename=output_filename,
+                    event_header='gen_ar_event.hpp',
+                    protos=protos)
 
-        MakoTemplateWriter.to_file(template_file, output_fullpath,
-                cmdline=sys.argv,
-                filename=output_filename,
-                event_header='gen_ar_eventhandler.hpp',
-                protos=protos)
+        # Generate event handler header
+        if args.gen_eventhandlerfile_hpp:
+            curdir = os.path.dirname(os.path.abspath(__file__))
+            template_file = os.sep.join([curdir, 'templates', 'gen_ar_eventhandlerfile.hpp'])
+            output_fullpath = os.sep.join([output_dir, output_filename])
 
-    return 0
+            MakoTemplateWriter.to_file(template_file, output_fullpath,
+                    cmdline=sys.argv,
+                    filename=output_filename,
+                    event_header='gen_ar_eventhandler.hpp',
+                    protos=protos)
+
+        rval = CopyDirFilesIfDifferent(output_dir, final_output_dir)
+
+    except:
+        rval = 1
+
+    finally:
+        DeleteDirTree(output_dir)
+
+    return rval
 
 if __name__ == '__main__':
     sys.exit(main())

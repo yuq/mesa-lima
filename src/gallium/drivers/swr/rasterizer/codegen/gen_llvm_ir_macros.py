@@ -1,4 +1,4 @@
-# Copyright (C) 2014-2017 Intel Corporation.   All Rights Reserved.
+# Copyright (C) 2014-2018 Intel Corporation.   All Rights Reserved.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -21,7 +21,7 @@
 
 from __future__ import print_function
 import os, sys, re
-from gen_common import MakoTemplateWriter, ArgumentParser
+from gen_common import *
 from argparse import FileType
 
 inst_aliases = {
@@ -312,21 +312,37 @@ def main():
     if not os.path.exists(args.output):
         os.makedirs(args.output)
 
-    if args.input:
-        functions = parse_ir_builder(args.input)
+    final_output_dir = args.output
+    args.output = MakeTmpDir('_codegen')
 
-        if args.gen_h:
-            generate_gen_h(functions, args.output)
+    rval = 0
+    try:
+        if args.input:
+            functions = parse_ir_builder(args.input)
 
-    elif args.gen_h:
-        print('Need to specify --input for --gen_h!')
+            if args.gen_h:
+                generate_gen_h(functions, args.output)
 
-    if args.gen_meta_h:
-        generate_meta_h(args.output)
+        elif args.gen_h:
+            print('Need to specify --input for --gen_h!')
 
-    if args.gen_intrin_h:
-        generate_intrin_h(args.output)
+        if args.gen_meta_h:
+            generate_meta_h(args.output)
+
+        if args.gen_intrin_h:
+            generate_intrin_h(args.output)
+
+        rval = CopyDirFilesIfDifferent(args.output, final_output_dir)
+
+    except:
+        print('ERROR: Could not generate llvm_ir_macros', file=sys.stderr)
+        rval = 1
+
+    finally:
+        DeleteDirTree(args.output)
+
+    return rval
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())
 # END OF FILE
