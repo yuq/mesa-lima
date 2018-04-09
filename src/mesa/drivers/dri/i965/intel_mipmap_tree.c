@@ -3792,19 +3792,6 @@ get_isl_dim_layout(const struct gen_device_info *devinfo,
    unreachable("Invalid texture target");
 }
 
-enum isl_aux_usage
-intel_miptree_get_aux_isl_usage(const struct brw_context *brw,
-                                const struct intel_mipmap_tree *mt)
-{
-   if (mt->hiz_buf)
-      return ISL_AUX_USAGE_HIZ;
-
-   if (!mt->mcs_buf)
-      return ISL_AUX_USAGE_NONE;
-
-   return mt->aux_usage;
-}
-
 bool
 intel_miptree_set_clear_color(struct brw_context *brw,
                               struct intel_mipmap_tree *mt,

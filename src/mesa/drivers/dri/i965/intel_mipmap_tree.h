@@ -485,10 +485,6 @@ enum isl_dim_layout
 get_isl_dim_layout(const struct gen_device_info *devinfo,
                    enum isl_tiling tiling, GLenum target);
 
-enum isl_aux_usage
-intel_miptree_get_aux_isl_usage(const struct brw_context *brw,
-                                const struct intel_mipmap_tree *mt);
-
 void
 intel_get_image_dims(struct gl_texture_image *image,
                      int *width, int *height, int *depth);
