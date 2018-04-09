@@ -90,11 +90,14 @@ namespace SwrJit
     Instruction* NO_EMU(LowerX86* pThis, TargetArch arch, TargetWidth width, CallInst* pCallInst);
     Instruction* VPERM_EMU(LowerX86* pThis, TargetArch arch, TargetWidth width, CallInst* pCallInst);
     Instruction* VGATHER_EMU(LowerX86* pThis, TargetArch arch, TargetWidth width, CallInst* pCallInst);
+    Instruction* DOUBLE_EMU(LowerX86* pThis, TargetArch arch, TargetWidth width, CallInst* pCallInst, Intrinsic::ID intrin);
+    
+    static Intrinsic::ID DOUBLE = (Intrinsic::ID)-1;
 
     static std::map<std::string, X86Intrinsic> intrinsicMap2[] = {
         //                              256 wide                                    512 wide
     {   // AVX
-        {"meta.intrinsic.VRCPPS",      {{Intrinsic::x86_avx_rcp_ps_256,              Intrinsic::not_intrinsic},                      NO_EMU}},
+        {"meta.intrinsic.VRCPPS",      {{Intrinsic::x86_avx_rcp_ps_256,              DOUBLE},                                        NO_EMU}},
         {"meta.intrinsic.VPERMPS",     {{Intrinsic::not_intrinsic,                   Intrinsic::not_intrinsic},                      VPERM_EMU}},
         {"meta.intrinsic.VPERMD",      {{Intrinsic::not_intrinsic,                   Intrinsic::not_intrinsic},                      VPERM_EMU}},
         {"meta.intrinsic.VGATHERPD",   {{Intrinsic::not_intrinsic,                   Intrinsic::not_intrinsic},                      VGATHER_EMU}},
@@ -104,7 +107,7 @@ namespace SwrJit
         {"meta.intrinsic.VCVTPH2PS",   {{Intrinsic::x86_vcvtph2ps_256,               Intrinsic::not_intrinsic},                      NO_EMU}},
     },
     {   // AVX2
-        {"meta.intrinsic.VRCPPS",      {{Intrinsic::x86_avx_rcp_ps_256,              Intrinsic::not_intrinsic},                      NO_EMU}},
+        {"meta.intrinsic.VRCPPS",      {{Intrinsic::x86_avx_rcp_ps_256,              DOUBLE},                                        NO_EMU}},
         {"meta.intrinsic.VPERMPS",     {{Intrinsic::x86_avx2_permps,                 Intrinsic::not_intrinsic},                      VPERM_EMU}},
         {"meta.intrinsic.VPERMD",      {{Intrinsic::x86_avx2_permd,                  Intrinsic::not_intrinsic},                      VPERM_EMU}},
         {"meta.intrinsic.VGATHERPD",   {{Intrinsic::not_intrinsic,                   Intrinsic::not_intrinsic},                      VGATHER_EMU}},
@@ -226,7 +229,15 @@ namespace SwrJit
 
             // Check if there is a native intrinsic for this instruction
             Intrinsic::ID id = intrinsic.intrin[vecWidth];
-            if (id != Intrinsic::not_intrinsic)
+            if (id == DOUBLE)
+            {
+                // Double pump the next smaller SIMD intrinsic
+                SWR_ASSERT(vecWidth != 0, "Cannot double pump smallest SIMD width.");
+                Intrinsic::ID id2 = intrinsic.intrin[vecWidth - 1];
+                SWR_ASSERT(id2 != Intrinsic::not_intrinsic, "Cannot find intrinsic to double pump.");
+                return DOUBLE_EMU(this, mTarget, vecWidth, pCallInst, id2);
+            }
+            else if (id != Intrinsic::not_intrinsic)
             {
                 Function* pIntrin = Intrinsic::getDeclaration(B->JM()->mpCurrentModule, id);
                 SmallVector<Value*, 8> args;
@@ -488,28 +499,25 @@ namespace SwrJit
         return cast<Instruction>(v32Gather);
     }
 
-#if 0
     // Double pump input using Intrin template arg. This blindly extracts lower and upper 256 from each vector argument and
     // calls the 256 wide intrinsic, then merges the results to 512 wide
-    template<Intrinsic::ID Intrin>
-    Value* EMU_512(LowerX86* pThis, TargetArch arch, TargetWidth width, CallInst* pCallInst)
+    Instruction* DOUBLE_EMU(LowerX86* pThis, TargetArch arch, TargetWidth width, CallInst* pCallInst, Intrinsic::ID intrin)
     {
         auto B = pThis->B;
         SWR_ASSERT(width == W512);
         Value* result[2];
-        Function* pX86IntrinFunc = Intrinsic::getDeclaration(B->JM()->mpCurrentModule, Intrin);
+        Function* pX86IntrinFunc = Intrinsic::getDeclaration(B->JM()->mpCurrentModule, intrin);
         for (uint32_t i = 0; i < 2; ++i)
         {
             SmallVector<Value*, 8> args;
             for (auto& arg : pCallInst->arg_operands())
             {
-                args.push_back(arg.get()->getType()->isVectorTy ? B->EXTRACT_16(arg.get(), i) : arg.get());
+                args.push_back(arg.get()->getType()->isVectorTy() ? B->EXTRACT_16(arg.get(), i) : arg.get());
             }
-            result[i] = B->CALL(pX86IntrinFunc, args);
+            result[i] = B->CALLA(pX86IntrinFunc, args);
         }
-        return B->JOIN_16(result[0], result[1]);
+        return cast<Instruction>(B->JOIN_16(result[0], result[1]));
     }
-#endif
 
 }
 
