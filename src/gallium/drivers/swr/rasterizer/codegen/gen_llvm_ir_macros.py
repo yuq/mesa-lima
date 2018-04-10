@@ -58,7 +58,6 @@ intrinsics = [
     ['VPTESTC',     ['a', 'b'], 'mInt32Ty'],
     ['VPTESTZ',     ['a', 'b'], 'mInt32Ty'],
     ['VFMADDPS',    ['a', 'b', 'c'], 'a'],
-    ['VMOVMSKPS',   ['a'], 'mInt32Ty'],
     ['VPHADDD',     ['a', 'b'], 'a'],
     ['PDEP32',      ['a', 'b'], 'a'],
     ['RDTSC',       [], 'mInt64Ty'],

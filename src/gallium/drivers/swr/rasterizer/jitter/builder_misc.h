@@ -102,6 +102,8 @@ Value *MASK_16(Value *vmask);
 Value *VMASK(Value *mask);
 Value *VMASK_16(Value *mask);
 
+Value *VMOVMSK(Value *mask);
+
 //////////////////////////////////////////////////////////////////////////
 /// @brief functions that build IR to call x86 intrinsics directly, or
 /// emulate them with other instructions if not available on the host

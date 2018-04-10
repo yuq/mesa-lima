@@ -608,7 +608,7 @@ namespace SwrJit
         pSrcArrayPtr = POINTER_CAST(pSrcArrayPtr, PointerType::get(pSrcTy, 0));
         pOffsetsArrayPtr = POINTER_CAST(pOffsetsArrayPtr, PointerType::get(mInt32Ty, 0));
 
-        Value* pMask = VMOVMSKPS(BITCAST(vMask, mSimdFP32Ty));
+        Value* pMask = VMOVMSK(vMask);
 
         // Setup loop basic block
         BasicBlock* pLoop = BasicBlock::Create(mpJitMgr->mContext, "Scatter_Loop", pFunc);

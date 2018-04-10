@@ -525,6 +525,28 @@ namespace SwrJit
         return S_EXT(mask, mSimd16Int32Ty);
     }
 
+    /// @brief Convert <Nxi1> llvm mask to integer
+    Value *Builder::VMOVMSK(Value* mask)
+    {
+        SWR_ASSERT(mask->getType()->getVectorElementType() == mInt1Ty);
+        uint32_t numLanes = mask->getType()->getVectorNumElements();
+        Value* i32Result;
+        if (numLanes == 8)
+        {
+            i32Result = BITCAST(mask, mInt8Ty);
+        }
+        else if (numLanes == 16)
+        {
+            i32Result = BITCAST(mask, mInt16Ty);
+        }
+        else
+        {
+            SWR_ASSERT("Unsupported vector width");
+            i32Result = BITCAST(mask, mInt8Ty);
+        }
+        return Z_EXT(i32Result, mInt32Ty);
+    }
+
     //////////////////////////////////////////////////////////////////////////
     /// @brief Generate a VPSHUFB operation in LLVM IR.  If not  
     /// supported on the underlying platform, emulate it
@@ -768,8 +790,7 @@ namespace SwrJit
     /// @brief pop count on vector mask (e.g. <8 x i1>)
     Value* Builder::VPOPCNT(Value* a)
     {
-        Value* b = BITCAST(VMASK(a), mSimdFP32Ty);
-        return POPCNT(VMOVMSKPS(b));
+        return POPCNT(VMOVMSK(a));
     }
 
     //////////////////////////////////////////////////////////////////////////
