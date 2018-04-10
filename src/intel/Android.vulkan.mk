@@ -67,8 +67,7 @@ $(intermediates)/vulkan/dummy.c:
 $(intermediates)/vulkan/anv_entrypoints.h: $(intermediates)/vulkan/dummy.c
 	$(VK_ENTRYPOINTS_SCRIPT) \
 		--outdir $(dir $@) \
-		--xml $(MESA_TOP)/src/vulkan/registry/vk.xml \
-		--xml $(MESA_TOP)/src/vulkan/registry/vk_android_native_buffer.xml
+		--xml $(MESA_TOP)/src/vulkan/registry/vk.xml
 
 LOCAL_EXPORT_C_INCLUDE_DIRS := \
         $(intermediates)
@@ -245,21 +244,18 @@ $(intermediates)/vulkan/anv_entrypoints.c:
 	@mkdir -p $(dir $@)
 	$(VK_ENTRYPOINTS_SCRIPT) \
 		--xml $(MESA_TOP)/src/vulkan/registry/vk.xml \
-		--xml $(MESA_TOP)/src/vulkan/registry/vk_android_native_buffer.xml \
 		--outdir $(dir $@)
 
 $(intermediates)/vulkan/anv_extensions.c:
 	@mkdir -p $(dir $@)
 	$(VK_EXTENSIONS_SCRIPT) \
 		--xml $(MESA_TOP)/src/vulkan/registry/vk.xml \
-		--xml $(MESA_TOP)/src/vulkan/registry/vk_android_native_buffer.xml \
 		--out-c $@
 
 $(intermediates)/vulkan/anv_extensions.h:
 	@mkdir -p $(dir $@)
 	$(VK_EXTENSIONS_SCRIPT) \
 		--xml $(MESA_TOP)/src/vulkan/registry/vk.xml \
-		--xml $(MESA_TOP)/src/vulkan/registry/vk_android_native_buffer.xml \
 		--out-h $@
 
 LOCAL_SHARED_LIBRARIES := $(ANV_SHARED_LIBRARIES)

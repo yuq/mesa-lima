@@ -22,10 +22,10 @@ anv_extensions_py = files('anv_extensions.py')
 
 anv_entrypoints = custom_target(
   'anv_entrypoints.[ch]',
-  input : ['anv_entrypoints_gen.py', vk_api_xml, vk_android_native_buffer_xml],
+  input : ['anv_entrypoints_gen.py', vk_api_xml],
   output : ['anv_entrypoints.h', 'anv_entrypoints.c'],
   command : [
-    prog_python2, '@INPUT0@', '--xml', '@INPUT1@', '--xml', '@INPUT2@',
+    prog_python2, '@INPUT0@', '--xml', '@INPUT1@',
     '--outdir', meson.current_build_dir(),
   ],
   depend_files : anv_extensions_py,
@@ -33,10 +33,10 @@ anv_entrypoints = custom_target(
 
 anv_extensions_c = custom_target(
   'anv_extensions.c',
-  input : ['anv_extensions_gen.py', vk_api_xml, vk_android_native_buffer_xml],
+  input : ['anv_extensions_gen.py', vk_api_xml],
   output : 'anv_extensions.c',
   command : [
-    prog_python2, '@INPUT0@', '--xml', '@INPUT1@', '--xml', '@INPUT2@',
+    prog_python2, '@INPUT0@', '--xml', '@INPUT1@',
     '--out-c', '@OUTPUT@',
   ],
   depend_files : anv_extensions_py,
@@ -44,10 +44,10 @@ anv_extensions_c = custom_target(
 
 anv_extensions_h = custom_target(
   'anv_extensions.h',
-  input : ['anv_extensions_gen.py', vk_api_xml, vk_android_native_buffer_xml],
+  input : ['anv_extensions_gen.py', vk_api_xml],
   output : 'anv_extensions.h',
   command : [
-    prog_python2, '@INPUT0@', '--xml', '@INPUT1@', '--xml', '@INPUT2@',
+    prog_python2, '@INPUT0@', '--xml', '@INPUT1@',
     '--out-h', '@OUTPUT@',
   ],
   depend_files : anv_extensions_py,
