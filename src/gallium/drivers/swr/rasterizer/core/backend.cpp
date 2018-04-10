@@ -1,5 +1,5 @@
 /****************************************************************************
-* Copyright (C) 2014-2015 Intel Corporation.   All Rights Reserved.
+* Copyright (C) 2014-2018 Intel Corporation.   All Rights Reserved.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a
 * copy of this software and associated documentation files (the "Software"),
@@ -78,7 +78,7 @@ void ProcessComputeBE(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t threadGroup
     csContext.pScratchSpace = (uint8_t*)pScratchSpace;
     csContext.scratchSpacePerSimd = pDC->pState->state.scratchSpaceSize;
 
-    state.pfnCsFunc(GetPrivateState(pDC), &csContext);
+    state.pfnCsFunc(GetPrivateState(pDC), pContext->threadPool.pThreadData[workerId].pWorkerPrivateData, &csContext);
 
     UPDATE_STAT_BE(CsInvocations, state.totalThreadsInGroup);
     AR_EVENT(CSStats(csContext.stats.numInstExecuted));
@@ -107,6 +107,7 @@ void ProcessStoreTileBE(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile
     SWR_RENDERTARGET_ATTACHMENT attachment)
 {
     SWR_CONTEXT *pContext = pDC->pContext;
+    HANDLE hWorkerPrivateData = pContext->threadPool.pThreadData[workerId].pWorkerPrivateData;
 
     RDTSC_BEGIN(BEStoreTiles, pDC->drawId);
 
@@ -139,7 +140,7 @@ void ProcessStoreTileBE(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile
             PFN_CLEAR_TILES pfnClearTiles = gClearTilesTable[srcFormat];
             SWR_ASSERT(pfnClearTiles != nullptr);
 
-            pfnClearTiles(pDC, attachment, macroTile, pHotTile->renderTargetArrayIndex, pHotTile->clearData, pDesc->rect);
+            pfnClearTiles(pDC, hWorkerPrivateData, attachment, macroTile, pHotTile->renderTargetArrayIndex, pHotTile->clearData, pDesc->rect);
         }
 
         if (pHotTile->state == HOTTILE_DIRTY || pDesc->postStoreTileState == (SWR_TILE_STATE)HOTTILE_DIRTY)
@@ -147,7 +148,7 @@ void ProcessStoreTileBE(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile
             int32_t destX = KNOB_MACROTILE_X_DIM * x;
             int32_t destY = KNOB_MACROTILE_Y_DIM * y;
 
-            pContext->pfnStoreTile(GetPrivateState(pDC), srcFormat,
+            pContext->pfnStoreTile(GetPrivateState(pDC), hWorkerPrivateData, srcFormat,
                 attachment, destX, destY, pHotTile->renderTargetArrayIndex, pHotTile->pBuffer);
         }
         

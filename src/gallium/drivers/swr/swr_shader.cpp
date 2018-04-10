@@ -586,6 +586,7 @@ BuilderSWR::CompileGS(struct swr_context *ctx, swr_jit_gs_key &key)
    attrBuilder.addStackAlignmentAttr(JM()->mVWidth * sizeof(float));
 
    std::vector<Type *> gsArgs{PointerType::get(Gen_swr_draw_context(JM()), 0),
+                              PointerType::get(mInt8Ty, 0),
                               PointerType::get(Gen_SWR_GS_CONTEXT(JM()), 0)};
    FunctionType *vsFuncType =
       FunctionType::get(Type::getVoidTy(JM()->mContext), gsArgs, false);
@@ -610,6 +611,8 @@ BuilderSWR::CompileGS(struct swr_context *ctx, swr_jit_gs_key &key)
    auto argitr = pFunction->arg_begin();
    Value *hPrivateData = &*argitr++;
    hPrivateData->setName("hPrivateData");
+   Value *pWorkerData = &*argitr++;
+   pWorkerData->setName("pWorkerData");
    Value *pGsCtx = &*argitr++;
    pGsCtx->setName("gsCtx");
 
@@ -754,6 +757,7 @@ BuilderSWR::CompileVS(struct swr_context *ctx, swr_jit_vs_key &key)
    attrBuilder.addStackAlignmentAttr(JM()->mVWidth * sizeof(float));
 
    std::vector<Type *> vsArgs{PointerType::get(Gen_swr_draw_context(JM()), 0),
+                              PointerType::get(mInt8Ty, 0),
                               PointerType::get(Gen_SWR_VS_CONTEXT(JM()), 0)};
    FunctionType *vsFuncType =
       FunctionType::get(Type::getVoidTy(JM()->mContext), vsArgs, false);
@@ -778,6 +782,8 @@ BuilderSWR::CompileVS(struct swr_context *ctx, swr_jit_vs_key &key)
    auto argitr = pFunction->arg_begin();
    Value *hPrivateData = &*argitr++;
    hPrivateData->setName("hPrivateData");
+   Value *pWorkerData = &*argitr++;
+   pWorkerData->setName("pWorkerData");
    Value *pVsCtx = &*argitr++;
    pVsCtx->setName("vsCtx");
    
@@ -1037,6 +1043,7 @@ BuilderSWR::CompileFS(struct swr_context *ctx, swr_jit_fs_key &key)
    attrBuilder.addStackAlignmentAttr(JM()->mVWidth * sizeof(float));
 
    std::vector<Type *> fsArgs{PointerType::get(Gen_swr_draw_context(JM()), 0),
+                              PointerType::get(mInt8Ty, 0),
                               PointerType::get(Gen_SWR_PS_CONTEXT(JM()), 0)};
    FunctionType *funcType =
       FunctionType::get(Type::getVoidTy(JM()->mContext), fsArgs, false);
@@ -1060,6 +1067,8 @@ BuilderSWR::CompileFS(struct swr_context *ctx, swr_jit_fs_key &key)
    auto args = pFunction->arg_begin();
    Value *hPrivateData = &*args++;
    hPrivateData->setName("hPrivateData");
+   Value *pWorkerData = &*args++;
+   pWorkerData->setName("pWorkerData");
    Value *pPS = &*args++;
    pPS->setName("psCtx");
 

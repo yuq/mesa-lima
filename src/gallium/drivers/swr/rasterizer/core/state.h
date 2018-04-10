@@ -911,18 +911,18 @@ struct SWR_BLEND_CONTEXT
 /// FUNCTION POINTERS FOR SHADERS
 
 #if USE_SIMD16_SHADERS
-typedef void(__cdecl *PFN_FETCH_FUNC)(HANDLE hPrivateData, SWR_FETCH_CONTEXT& fetchInfo, simd16vertex& out);
+typedef void(__cdecl *PFN_FETCH_FUNC)(HANDLE hPrivateData, HANDLE hWorkerPrivateData, SWR_FETCH_CONTEXT& fetchInfo, simd16vertex& out);
 #else
-typedef void(__cdecl *PFN_FETCH_FUNC)(HANDLE hPrivateData, SWR_FETCH_CONTEXT& fetchInfo, simdvertex& out);
+typedef void(__cdecl *PFN_FETCH_FUNC)(HANDLE hPrivateData, HANDLE hWorkerPrivateData, SWR_FETCH_CONTEXT& fetchInfo, simdvertex& out);
 #endif
-typedef void(__cdecl *PFN_VERTEX_FUNC)(HANDLE hPrivateData, SWR_VS_CONTEXT* pVsContext);
-typedef void(__cdecl *PFN_HS_FUNC)(HANDLE hPrivateData, SWR_HS_CONTEXT* pHsContext);
-typedef void(__cdecl *PFN_DS_FUNC)(HANDLE hPrivateData, SWR_DS_CONTEXT* pDsContext);
-typedef void(__cdecl *PFN_GS_FUNC)(HANDLE hPrivateData, SWR_GS_CONTEXT* pGsContext);
-typedef void(__cdecl *PFN_CS_FUNC)(HANDLE hPrivateData, SWR_CS_CONTEXT* pCsContext);
+typedef void(__cdecl *PFN_VERTEX_FUNC)(HANDLE hPrivateData, HANDLE hWorkerPrivateData, SWR_VS_CONTEXT* pVsContext);
+typedef void(__cdecl *PFN_HS_FUNC)(HANDLE hPrivateData, HANDLE hWorkerPrivateData, SWR_HS_CONTEXT* pHsContext);
+typedef void(__cdecl *PFN_DS_FUNC)(HANDLE hPrivateData, HANDLE hWorkerPrivateData, SWR_DS_CONTEXT* pDsContext);
+typedef void(__cdecl *PFN_GS_FUNC)(HANDLE hPrivateData, HANDLE hWorkerPrivateData, SWR_GS_CONTEXT* pGsContext);
+typedef void(__cdecl *PFN_CS_FUNC)(HANDLE hPrivateData, HANDLE hWorkerPrivateData, SWR_CS_CONTEXT* pCsContext);
 typedef void(__cdecl *PFN_SO_FUNC)(SWR_STREAMOUT_CONTEXT& soContext);
-typedef void(__cdecl *PFN_PIXEL_KERNEL)(HANDLE hPrivateData, SWR_PS_CONTEXT *pContext);
-typedef void(__cdecl *PFN_CPIXEL_KERNEL)(HANDLE hPrivateData, SWR_PS_CONTEXT *pContext);
+typedef void(__cdecl *PFN_PIXEL_KERNEL)(HANDLE hPrivateData, HANDLE hWorkerPrivateData, SWR_PS_CONTEXT *pContext);
+typedef void(__cdecl *PFN_CPIXEL_KERNEL)(HANDLE hPrivateData, HANDLE hWorkerPrivateData, SWR_PS_CONTEXT *pContext);
 typedef void(__cdecl *PFN_BLEND_JIT_FUNC)(SWR_BLEND_CONTEXT*);
 typedef simdscalar(*PFN_QUANTIZE_DEPTH)(simdscalar const &);
 

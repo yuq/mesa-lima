@@ -1,5 +1,5 @@
 /****************************************************************************
-* Copyright (C) 2014-2015 Intel Corporation.   All Rights Reserved.
+* Copyright (C) 2014-2018 Intel Corporation.   All Rights Reserved.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a
 * copy of this software and associated documentation files (the "Software"),
@@ -40,7 +40,7 @@
 extern PFN_WORK_FUNC gRasterizerFuncs[SWR_MULTISAMPLE_TYPE_COUNT][2][2][SWR_INPUT_COVERAGE_COUNT][STATE_VALID_TRI_EDGE_COUNT][2];
 
 template <uint32_t numSamples = 1>
-void GetRenderHotTiles(DRAW_CONTEXT *pDC, uint32_t macroID, uint32_t x, uint32_t y, RenderOutputBuffers &renderBuffers, uint32_t renderTargetArrayIndex);
+void GetRenderHotTiles(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroID, uint32_t x, uint32_t y, RenderOutputBuffers &renderBuffers, uint32_t renderTargetArrayIndex);
 template <typename RT>
 void StepRasterTileX(uint32_t colorHotTileMask, RenderOutputBuffers &buffers);
 template <typename RT>
@@ -1145,7 +1145,7 @@ void RasterizeTriangle(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t macroTile,
     uint32_t maxX = maxTileX;
 
     RenderOutputBuffers renderBuffers, currentRenderBufferRow;
-    GetRenderHotTiles<RT::MT::numSamples>(pDC, macroTile, minTileX, minTileY, renderBuffers, triDesc.triFlags.renderTargetArrayIndex);
+    GetRenderHotTiles<RT::MT::numSamples>(pDC, workerId, macroTile, minTileX, minTileY, renderBuffers, triDesc.triFlags.renderTargetArrayIndex);
     currentRenderBufferRow = renderBuffers;
 
     // rasterize and generate coverage masks per sample
@@ -1297,10 +1297,11 @@ void RasterizeTriangle(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t macroTile,
 
 // Get pointers to hot tile memory for color RT, depth, stencil
 template <uint32_t numSamples>
-void GetRenderHotTiles(DRAW_CONTEXT *pDC, uint32_t macroID, uint32_t tileX, uint32_t tileY, RenderOutputBuffers &renderBuffers, uint32_t renderTargetArrayIndex)
+void GetRenderHotTiles(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroID, uint32_t tileX, uint32_t tileY, RenderOutputBuffers &renderBuffers, uint32_t renderTargetArrayIndex)
 {
     const API_STATE& state = GetApiState(pDC);
     SWR_CONTEXT *pContext = pDC->pContext;
+    HANDLE hWorkerPrivateData = pContext->threadPool.pThreadData[workerId].pWorkerPrivateData;
 
     uint32_t mx, my;
     MacroTileMgr::getTileIndices(macroID, mx, my);
@@ -1316,7 +1317,7 @@ void GetRenderHotTiles(DRAW_CONTEXT *pDC, uint32_t macroID, uint32_t tileX, uint
     uint32_t colorHottileEnableMask = state.colorHottileEnable;
     while(_BitScanForward(&rtSlot, colorHottileEnableMask))
     {
-        HOTTILE *pColor = pContext->pHotTileMgr->GetHotTile(pContext, pDC, macroID, (SWR_RENDERTARGET_ATTACHMENT)(SWR_ATTACHMENT_COLOR0 + rtSlot), true, 
+        HOTTILE *pColor = pContext->pHotTileMgr->GetHotTile(pContext, pDC, hWorkerPrivateData, macroID, (SWR_RENDERTARGET_ATTACHMENT)(SWR_ATTACHMENT_COLOR0 + rtSlot), true, 
             numSamples, renderTargetArrayIndex);
         pColor->state = HOTTILE_DIRTY;
         renderBuffers.pColor[rtSlot] = pColor->pBuffer + offset;
@@ -1328,7 +1329,7 @@ void GetRenderHotTiles(DRAW_CONTEXT *pDC, uint32_t macroID, uint32_t tileX, uint
         const uint32_t pitch = KNOB_MACROTILE_X_DIM * FormatTraits<KNOB_DEPTH_HOT_TILE_FORMAT>::bpp / 8;
         uint32_t offset = ComputeTileOffset2D<TilingTraits<SWR_TILE_SWRZ, FormatTraits<KNOB_DEPTH_HOT_TILE_FORMAT>::bpp> >(pitch, tileX, tileY);
         offset*=numSamples;
-        HOTTILE *pDepth = pContext->pHotTileMgr->GetHotTile(pContext, pDC, macroID, SWR_ATTACHMENT_DEPTH, true, 
+        HOTTILE *pDepth = pContext->pHotTileMgr->GetHotTile(pContext, pDC, hWorkerPrivateData, macroID, SWR_ATTACHMENT_DEPTH, true,
             numSamples, renderTargetArrayIndex);
         pDepth->state = HOTTILE_DIRTY;
         SWR_ASSERT(pDepth->pBuffer != nullptr);
@@ -1339,7 +1340,7 @@ void GetRenderHotTiles(DRAW_CONTEXT *pDC, uint32_t macroID, uint32_t tileX, uint
         const uint32_t pitch = KNOB_MACROTILE_X_DIM * FormatTraits<KNOB_STENCIL_HOT_TILE_FORMAT>::bpp / 8;
         uint32_t offset = ComputeTileOffset2D<TilingTraits<SWR_TILE_SWRZ, FormatTraits<KNOB_STENCIL_HOT_TILE_FORMAT>::bpp> >(pitch, tileX, tileY);
         offset*=numSamples;
-        HOTTILE* pStencil = pContext->pHotTileMgr->GetHotTile(pContext, pDC, macroID, SWR_ATTACHMENT_STENCIL, true, 
+        HOTTILE* pStencil = pContext->pHotTileMgr->GetHotTile(pContext, pDC, hWorkerPrivateData, macroID, SWR_ATTACHMENT_STENCIL, true,
             numSamples, renderTargetArrayIndex);
         pStencil->state = HOTTILE_DIRTY;
         SWR_ASSERT(pStencil->pBuffer != nullptr);

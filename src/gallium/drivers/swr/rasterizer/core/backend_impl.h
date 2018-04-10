@@ -1,5 +1,5 @@
 /****************************************************************************
-* Copyright (C) 2014-2015 Intel Corporation.   All Rights Reserved.
+* Copyright (C) 2014-2018 Intel Corporation.   All Rights Reserved.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a
 * copy of this software and associated documentation files (the "Software"),
@@ -884,6 +884,9 @@ void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t
     BarycentricCoeffs coeffs;
     SetupBarycentricCoeffs(&coeffs, work);
 
+    SWR_CONTEXT *pContext = pDC->pContext;
+    void* pWorkerData = pContext->threadPool.pThreadData[workerId].pWorkerPrivateData;
+
     SWR_PS_CONTEXT psContext;
     const SWR_MULTISAMPLE_POS& samplePos = state.rastState.samplePositions;
     SetupPixelShaderContext<T>(&psContext, samplePos, work);
@@ -964,7 +967,7 @@ void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t
 
             // execute pixel shader
             RDTSC_BEGIN(BEPixelShader, pDC->drawId);
-            state.psState.pfnPixelShader(GetPrivateState(pDC), &psContext);
+            state.psState.pfnPixelShader(GetPrivateState(pDC), pWorkerData, &psContext);
             UPDATE_STAT_BE(PsInvocations, _mm_popcnt_u32(_simd_movemask_ps(activeLanes)));
             RDTSC_END(BEPixelShader, 0);
 

@@ -1,5 +1,5 @@
 /****************************************************************************
-* Copyright (C) 2014-2015 Intel Corporation.   All Rights Reserved.
+* Copyright (C) 2014-2018 Intel Corporation.   All Rights Reserved.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a
 * copy of this software and associated documentation files (the "Software"),
@@ -91,6 +91,7 @@ struct FetchJit : public BuilderGfxMem
     void CreateGatherOddFormats(SWR_FORMAT format, Value* pMask, Value* pBase, Value* offsets, Value* result[4]);
     void ConvertFormat(SWR_FORMAT format, Value *texels[4]);
 
+    Value* mpWorkerData;
     Value* mpFetchInfo;
 };
 
@@ -113,6 +114,8 @@ Function* FetchJit::Create(const FETCH_COMPILE_STATE& fetchState)
     privateContext->setName("privateContext");
     SetPrivateContext(privateContext);
 
+    mpWorkerData = &*argitr; ++argitr;
+    mpWorkerData->setName("pWorkerData");
     mpFetchInfo = &*argitr; ++argitr;
     mpFetchInfo->setName("fetchInfo");
     Value*    pVtxOut = &*argitr;
@@ -1097,8 +1100,7 @@ Value* FetchJit::GetSimdValid32bitIndices(Value* pIndices, Value* pLastIndex)
     Value* vIndexMask = ICMP_SGT(vMaxIndex, vIndexOffsets);
 
     // Load the indices; OOB loads 0
-    pIndices = BITCAST(pIndices, PointerType::get(mSimdInt32Ty, 0));
-    return MASKED_LOAD(pIndices, 4, vIndexMask, VIMMED1(0));
+    return MASKED_LOAD(pIndices, 4, vIndexMask, VIMMED1(0), "vIndices", PointerType::get(mSimdInt32Ty, 0), GFX_MEM_CLIENT_FETCH);
 }
 
 //////////////////////////////////////////////////////////////////////////

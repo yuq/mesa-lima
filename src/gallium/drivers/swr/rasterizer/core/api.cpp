@@ -1,5 +1,5 @@
 /****************************************************************************
-* Copyright (C) 2014-2016 Intel Corporation.   All Rights Reserved.
+* Copyright (C) 2014-2018 Intel Corporation.   All Rights Reserved.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a
 * copy of this software and associated documentation files (the "Software"),
@@ -120,6 +120,11 @@ HANDLE SwrCreateContext(
         pContext->apiThreadInfo.bindAPIThread0          = true;
         pContext->apiThreadInfo.numAPIReservedThreads   = 1;
         pContext->apiThreadInfo.numAPIThreadsPerCore    = 1;
+    }
+
+    if (pCreateInfo->pWorkerPrivateState)
+    {
+        pContext->workerPrivateState = *pCreateInfo->pWorkerPrivateState;
     }
 
     memset(&pContext->WaitLock, 0, sizeof(pContext->WaitLock));

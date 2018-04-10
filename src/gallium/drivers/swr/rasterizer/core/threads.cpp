@@ -1,5 +1,5 @@
 /****************************************************************************
-* Copyright (C) 2014-2016 Intel Corporation.   All Rights Reserved.
+* Copyright (C) 2014-2018 Intel Corporation.   All Rights Reserved.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a
 * copy of this software and associated documentation files (the "Software"),
@@ -42,6 +42,7 @@
 #endif
 
 #include "common/os.h"
+#include "core/api.h"
 #include "context.h"
 #include "frontend.h"
 #include "backend.h"
@@ -1128,7 +1129,8 @@ void CreateThreadPool(SWR_CONTEXT* pContext, THREAD_POOL* pPool)
 
     if (pContext->threadInfo.SINGLE_THREADED)
     {
-        return;
+        numAPIReservedThreads = 0;
+        numThreads = 1;
     }
 
     if (numAPIReservedThreads)
@@ -1139,6 +1141,10 @@ void CreateThreadPool(SWR_CONTEXT* pContext, THREAD_POOL* pPool)
         {
             numAPIReservedThreads = 0;
         }
+        else
+        {
+            memset(pPool->pApiThreadData, 0, sizeof(THREAD_DATA) * numAPIReservedThreads);
+        }
     }
     pPool->numReservedThreads = numAPIReservedThreads;
 
@@ -1147,8 +1153,37 @@ void CreateThreadPool(SWR_CONTEXT* pContext, THREAD_POOL* pPool)
 
     pPool->pThreadData = new (std::nothrow) THREAD_DATA[pPool->numThreads];
     SWR_ASSERT(pPool->pThreadData);
+    memset(pPool->pThreadData, 0, sizeof(THREAD_DATA) * pPool->numThreads);
     pPool->numaMask = 0;
 
+    // Allocate worker private data
+    pPool->pWorkerPrivateDataArray = nullptr;
+    if (pContext->workerPrivateState.perWorkerPrivateStateSize)
+    {
+        size_t perWorkerSize = AlignUpPow2(pContext->workerPrivateState.perWorkerPrivateStateSize, 64);
+        size_t totalSize = perWorkerSize * pPool->numThreads;
+        if (totalSize)
+        {
+            pPool->pWorkerPrivateDataArray = AlignedMalloc(totalSize, 64);
+            SWR_ASSERT(pPool->pWorkerPrivateDataArray);
+
+            void* pWorkerData = pPool->pWorkerPrivateDataArray;
+            for (uint32_t i = 0; i < pPool->numThreads; ++i)
+            {
+                pPool->pThreadData[i].pWorkerPrivateData = pWorkerData;
+                if (pContext->workerPrivateState.pfnInitWorkerData)
+                {
+                    pContext->workerPrivateState.pfnInitWorkerData(pWorkerData, i);
+                }
+                pWorkerData = PtrAdd(pWorkerData, perWorkerSize);
+            }
+        }
+    }
+
+    if (pContext->threadInfo.SINGLE_THREADED)
+    {
+        return;
+    }
 
     pPool->pThreads = new (std::nothrow) THREAD_PTR[pPool->numThreads];
     SWR_ASSERT(pPool->pThreads);
@@ -1293,13 +1328,13 @@ void StartThreadPool(SWR_CONTEXT* pContext, THREAD_POOL* pPool)
 /// @param pPool - pointer to thread pool object.
 void DestroyThreadPool(SWR_CONTEXT *pContext, THREAD_POOL *pPool)
 {
-    if (!pContext->threadInfo.SINGLE_THREADED)
-    {
-        // Wait for all threads to finish
-        SwrWaitForIdle(pContext);
+    // Wait for all threads to finish
+    SwrWaitForIdle(pContext);
 
-        // Wait for threads to finish and destroy them
-        for (uint32_t t = 0; t < pPool->numThreads; ++t)
+    // Wait for threads to finish and destroy them
+    for (uint32_t t = 0; t < pPool->numThreads; ++t)
+    {
+        if (!pContext->threadInfo.SINGLE_THREADED)
         {
             // Detach from thread.  Cannot join() due to possibility (in Windows) of code
             // in some DLLMain(THREAD_DETATCH case) blocking the thread until after this returns.
@@ -1307,10 +1342,17 @@ void DestroyThreadPool(SWR_CONTEXT *pContext, THREAD_POOL *pPool)
             delete(pPool->pThreads[t]);
         }
 
-        delete[] pPool->pThreads;
-
-        // Clean up data used by threads
-        delete[] pPool->pThreadData;
-        delete[] pPool->pApiThreadData;
+        if (pContext->workerPrivateState.pfnFinishWorkerData)
+        {
+            pContext->workerPrivateState.pfnFinishWorkerData(pPool->pThreadData[t].pWorkerPrivateData, t);
+        }
     }
+
+    delete[] pPool->pThreads;
+
+    // Clean up data used by threads
+    delete[] pPool->pThreadData;
+    delete[] pPool->pApiThreadData;
+
+    AlignedFree(pPool->pWorkerPrivateDataArray);
 }

@@ -1,5 +1,5 @@
 /****************************************************************************
-* Copyright (C) 2014-2015 Intel Corporation.   All Rights Reserved.
+* Copyright (C) 2014-2018 Intel Corporation.   All Rights Reserved.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a
 * copy of this software and associated documentation files (the "Software"),
@@ -19,13 +19,13 @@
 * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 * IN THE SOFTWARE.
-* 
+*
 * @file JitManager.cpp
-* 
+*
 * @brief Implementation if the Jit Manager.
-* 
+*
 * Notes:
-* 
+*
 ******************************************************************************/
 #include "jit_pch.hpp"
 
@@ -66,7 +66,7 @@ JitManager::JitManager(uint32_t simdWidth, const char *arch, const char* core)
     InitializeNativeTargetAsmPrinter();
     InitializeNativeTargetDisassembler();
 
-        
+
     TargetOptions    tOpts;
     tOpts.AllowFPOpFusion = FPOpFusion::Fast;
     tOpts.NoInfsFPMath = false;
@@ -125,6 +125,8 @@ JitManager::JitManager(uint32_t simdWidth, const char *arch, const char* core)
     // llvm5 is picky and does not take a void * type
     fsArgs.push_back(PointerType::get(Gen_SWR_FETCH_CONTEXT(this), 0));
 
+    fsArgs.push_back(Type::getInt8PtrTy(mContext));
+
     fsArgs.push_back(PointerType::get(Gen_SWR_FETCH_CONTEXT(this), 0));
 #if USE_SIMD16_SHADERS
     fsArgs.push_back(PointerType::get(Gen_simd16vertex(this), 0));
@@ -158,7 +160,7 @@ JitManager::JitManager(uint32_t simdWidth, const char *arch, const char* core)
 void JitManager::SetupNewModule()
 {
     SWR_ASSERT(mIsModuleFinalized == true && "Current module is not finalized!");
-    
+
     std::unique_ptr<Module> newModule(new Module("", mContext));
     mpCurrentModule = newModule.get();
 #if defined(_WIN32)

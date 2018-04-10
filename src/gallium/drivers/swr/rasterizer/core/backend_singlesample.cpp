@@ -1,5 +1,5 @@
 /****************************************************************************
-* Copyright (C) 2014-2015 Intel Corporation.   All Rights Reserved.
+* Copyright (C) 2014-2018 Intel Corporation.   All Rights Reserved.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a
 * copy of this software and associated documentation files (the "Software"),
@@ -42,6 +42,8 @@ void BackendSingleSample(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint3
 {
     RDTSC_BEGIN(BESingleSampleBackend, pDC->drawId);
     RDTSC_BEGIN(BESetup, pDC->drawId);
+
+    void* pWorkerData = pDC->pContext->threadPool.pThreadData[workerId].pWorkerPrivateData;
 
     const API_STATE &state = GetApiState(pDC);
 
@@ -146,7 +148,7 @@ void BackendSingleSample(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint3
 
                 // execute pixel shader
                 RDTSC_BEGIN(BEPixelShader, pDC->drawId);
-                state.psState.pfnPixelShader(GetPrivateState(pDC), &psContext);
+                state.psState.pfnPixelShader(GetPrivateState(pDC), pWorkerData, &psContext);
                 RDTSC_END(BEPixelShader, 0);
 
                 // update stats
