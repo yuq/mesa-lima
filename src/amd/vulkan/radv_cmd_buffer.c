@@ -625,8 +625,6 @@ static void
 radv_emit_shader_prefetch(struct radv_cmd_buffer *cmd_buffer,
 			  struct radv_shader_variant *shader)
 {
-	struct radeon_winsys *ws = cmd_buffer->device->ws;
-	struct radeon_winsys_cs *cs = cmd_buffer->cs;
 	uint64_t va;
 
 	if (!shader)
@@ -634,7 +632,6 @@ radv_emit_shader_prefetch(struct radv_cmd_buffer *cmd_buffer,
 
 	va = radv_buffer_get_va(shader->bo) + shader->bo_offset;
 
-	radv_cs_add_buffer(ws, cs, shader->bo, 8);
 	si_cp_dma_prefetch(cmd_buffer, va, shader->code_size);
 }
 
@@ -701,6 +698,18 @@ radv_emit_graphics_pipeline(struct radv_cmd_buffer *cmd_buffer)
 		cmd_buffer->state.dirty |= RADV_CMD_DIRTY_DYNAMIC_SCISSOR;
 
 	radeon_emit_array(cmd_buffer->cs, pipeline->cs.buf, pipeline->cs.cdw);
+
+	for (unsigned i = 0; i < MESA_SHADER_COMPUTE; i++) {
+		if (!pipeline->shaders[i])
+			continue;
+
+		radv_cs_add_buffer(cmd_buffer->device->ws, cmd_buffer->cs,
+				   pipeline->shaders[i]->bo, 8);
+	}
+
+	if (radv_pipeline_has_gs(pipeline))
+		radv_cs_add_buffer(cmd_buffer->device->ws, cmd_buffer->cs,
+				   pipeline->gs_copy_shader->bo, 8);
 
 	if (unlikely(cmd_buffer->device->trace_bo))
 		radv_save_pipeline(cmd_buffer, pipeline, RING_GFX);
@@ -2279,6 +2288,9 @@ radv_emit_compute_pipeline(struct radv_cmd_buffer *cmd_buffer)
 	cmd_buffer->compute_scratch_size_needed =
 	                          MAX2(cmd_buffer->compute_scratch_size_needed,
 	                               pipeline->max_waves * pipeline->scratch_bytes_per_wave);
+
+	radv_cs_add_buffer(cmd_buffer->device->ws, cmd_buffer->cs,
+			   pipeline->shaders[MESA_SHADER_COMPUTE]->bo, 8);
 
 	if (unlikely(cmd_buffer->device->trace_bo))
 		radv_save_pipeline(cmd_buffer, pipeline, RING_COMPUTE);
