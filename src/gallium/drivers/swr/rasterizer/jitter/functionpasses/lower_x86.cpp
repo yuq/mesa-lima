@@ -75,7 +75,6 @@ namespace SwrJit
         {"meta.intrinsic.BEXTR_32",        Intrinsic::x86_bmi_bextr_32},
         {"meta.intrinsic.VPSHUFB",         Intrinsic::x86_avx2_pshuf_b},
         {"meta.intrinsic.VCVTPS2PH",       Intrinsic::x86_vcvtps2ph_256},
-        {"meta.intrinsic.VHSUBPS",         Intrinsic::x86_avx_hsub_ps_256},
         {"meta.intrinsic.VPTESTC",         Intrinsic::x86_avx_ptestc_256},
         {"meta.intrinsic.VPTESTZ",         Intrinsic::x86_avx_ptestz_256},
         {"meta.intrinsic.VFMADDPS",        Intrinsic::x86_fma_vfmadd_ps_256},
@@ -89,6 +88,7 @@ namespace SwrJit
     Instruction* VPERM_EMU(LowerX86* pThis, TargetArch arch, TargetWidth width, CallInst* pCallInst);
     Instruction* VGATHER_EMU(LowerX86* pThis, TargetArch arch, TargetWidth width, CallInst* pCallInst);
     Instruction* VROUND_EMU(LowerX86* pThis, TargetArch arch, TargetWidth width, CallInst* pCallInst);
+    Instruction* VHSUB_EMU(LowerX86* pThis, TargetArch arch, TargetWidth width, CallInst* pCallInst);
 
     Instruction* DOUBLE_EMU(LowerX86* pThis, TargetArch arch, TargetWidth width, CallInst* pCallInst, Intrinsic::ID intrin);
     
@@ -106,6 +106,7 @@ namespace SwrJit
         {"meta.intrinsic.VCVTPD2PS",   {{Intrinsic::x86_avx_cvt_pd2_ps_256,          Intrinsic::not_intrinsic},                      NO_EMU}},
         {"meta.intrinsic.VCVTPH2PS",   {{Intrinsic::x86_vcvtph2ps_256,               Intrinsic::not_intrinsic},                      NO_EMU}},
         {"meta.intrinsic.VROUND",      {{Intrinsic::x86_avx_round_ps_256,            DOUBLE},                                        NO_EMU}},
+        {"meta.intrinsic.VHSUBPS",     {{Intrinsic::x86_avx_hsub_ps_256,             DOUBLE},                                        NO_EMU}},
     },
     {   // AVX2
         {"meta.intrinsic.VRCPPS",      {{Intrinsic::x86_avx_rcp_ps_256,              DOUBLE},                                        NO_EMU}},
@@ -117,6 +118,7 @@ namespace SwrJit
         {"meta.intrinsic.VCVTPD2PS",   {{Intrinsic::x86_avx_cvt_pd2_ps_256,          Intrinsic::not_intrinsic},                      NO_EMU}},
         {"meta.intrinsic.VCVTPH2PS",   {{Intrinsic::x86_vcvtph2ps_256,               Intrinsic::not_intrinsic},                      NO_EMU}},
         {"meta.intrinsic.VROUND",      {{Intrinsic::x86_avx_round_ps_256,            DOUBLE},                                        NO_EMU}},
+        {"meta.intrinsic.VHSUBPS",     {{Intrinsic::x86_avx_hsub_ps_256,             DOUBLE},                                        NO_EMU}},
     },
     {   // AVX512
         {"meta.intrinsic.VRCPPS",      {{Intrinsic::x86_avx512_rcp14_ps_256,         Intrinsic::x86_avx512_rcp14_ps_512},            NO_EMU}},
@@ -127,7 +129,8 @@ namespace SwrJit
         {"meta.intrinsic.VGATHERDD",   {{Intrinsic::not_intrinsic,                   Intrinsic::not_intrinsic},                      VGATHER_EMU}},
         {"meta.intrinsic.VCVTPD2PS",   {{Intrinsic::x86_avx512_mask_cvtpd2ps_256,    Intrinsic::x86_avx512_mask_cvtpd2ps_512 },      NO_EMU}},
         {"meta.intrinsic.VCVTPH2PS",   {{Intrinsic::x86_avx512_mask_vcvtph2ps_256,   Intrinsic::x86_avx512_mask_vcvtph2ps_512 },     NO_EMU}},
-        {"meta.intrinsic.VROUND",      {{Intrinsic::not_intrinsic,                   Intrinsic::not_intrinsic },                     VROUND_EMU}},
+        {"meta.intrinsic.VROUND",      {{Intrinsic::not_intrinsic,                   Intrinsic::not_intrinsic},                      VROUND_EMU}},
+        {"meta.intrinsic.VHSUBPS",     {{Intrinsic::not_intrinsic,                   Intrinsic::not_intrinsic},                      VHSUB_EMU}},
     }
     };
 
@@ -454,21 +457,45 @@ namespace SwrJit
             }
             else if (width == W512)
             {
-                // Double pump 8-wide
-                auto v32Mask = B->BITCAST(pThis->VectorMask(vi1Mask), vSrc->getType());
-                Value *src0 = B->EXTRACT_16(vSrc, 0);
-                Value *src1 = B->EXTRACT_16(vSrc, 1);
+                // Double pump 4-wide for 64bit elements
+                if (vSrc->getType()->getVectorElementType() == B->mDoubleTy)
+                {
+                    auto v64Mask = B->S_EXT(pThis->VectorMask(vi1Mask), B->mInt64Ty);
+                    v64Mask = B->BITCAST(v64Mask, vSrc->getType());
 
-                Value *indices0 = B->EXTRACT_16(vi32Indices, 0);
-                Value *indices1 = B->EXTRACT_16(vi32Indices, 1);
+                    Value* src0 = B->VSHUFFLE(vSrc, vSrc, B->C({ 0, 1, 2, 3 }));
+                    Value* src1 = B->VSHUFFLE(vSrc, vSrc, B->C({ 4, 5, 6, 7 }));
 
-                Value *mask0 = B->EXTRACT_16(v32Mask, 0);
-                Value *mask1 = B->EXTRACT_16(v32Mask, 1);
+                    Value* indices0 = B->VSHUFFLE(vi32Indices, vi32Indices, B->C({ 0, 1, 2, 3 }));
+                    Value* indices1 = B->VSHUFFLE(vi32Indices, vi32Indices, B->C({ 4, 5, 6, 7 }));
 
-                Value *gather0 = B->CALL(pX86IntrinFunc, { src0, pBase, indices0, mask0, i8Scale });
-                Value *gather1 = B->CALL(pX86IntrinFunc, { src1, pBase, indices1, mask1, i8Scale });
+                    Value* mask0 = B->VSHUFFLE(v64Mask, v64Mask, B->C({ 0, 1, 2, 3 }));
+                    Value* mask1 = B->VSHUFFLE(v64Mask, v64Mask, B->C({ 4, 5, 6, 7 }));
 
-                v32Gather = B->JOIN_16(gather0, gather1);
+                    Value* gather0 = B->CALL(pX86IntrinFunc, { src0, pBase, indices0, mask0, i8Scale });
+                    Value* gather1 = B->CALL(pX86IntrinFunc, { src1, pBase, indices1, mask1, i8Scale });
+
+                    v32Gather = B->VSHUFFLE(gather0, gather1, B->C({ 0, 1, 2, 3, 4, 5, 6, 7 }));
+                }
+                else
+                {
+                    // Double pump 8-wide for 32bit elements
+                    auto v32Mask = pThis->VectorMask(vi1Mask);
+                    v32Mask = B->BITCAST(v32Mask, vSrc->getType());
+                    Value* src0 = B->EXTRACT_16(vSrc, 0);
+                    Value* src1 = B->EXTRACT_16(vSrc, 1);
+
+                    Value* indices0 = B->EXTRACT_16(vi32Indices, 0);
+                    Value* indices1 = B->EXTRACT_16(vi32Indices, 1);
+
+                    Value* mask0 = B->EXTRACT_16(v32Mask, 0);
+                    Value* mask1 = B->EXTRACT_16(v32Mask, 1);
+
+                    Value* gather0 = B->CALL(pX86IntrinFunc, { src0, pBase, indices0, mask0, i8Scale });
+                    Value* gather1 = B->CALL(pX86IntrinFunc, { src1, pBase, indices1, mask1, i8Scale });
+
+                    v32Gather = B->JOIN_16(gather0, gather1);
+                }
             }
         }
         else if (arch == AVX512)
@@ -532,6 +559,35 @@ namespace SwrJit
         }
 
         return nullptr;
+    }
+
+    // No support for hsub in AVX512
+    Instruction* VHSUB_EMU(LowerX86* pThis, TargetArch arch, TargetWidth width, CallInst* pCallInst)
+    {
+        SWR_ASSERT(arch == AVX512);
+
+        auto B = pThis->B;
+        auto src0 = pCallInst->getOperand(0);
+        auto src1 = pCallInst->getOperand(1);
+
+        // 256b hsub can just use avx intrinsic
+        if (width == W256)
+        {
+            auto pX86IntrinFunc = Intrinsic::getDeclaration(B->JM()->mpCurrentModule, Intrinsic::x86_avx_hsub_ps_256);
+            return cast<Instruction>(B->CALL2(pX86IntrinFunc, src0, src1));
+        }
+        else if (width == W512)
+        {
+            // 512b hsub can be accomplished with shuf/sub combo
+            auto minuend = B->VSHUFFLE(src0, src1, B->C({ 0, 2, 8, 10, 4, 6, 12, 14 }));
+            auto subtrahend = B->VSHUFFLE(src0, src1, B->C({ 1, 3, 9, 11, 5, 7, 13, 15 }));
+            return cast<Instruction>(B->SUB(minuend, subtrahend));
+        }
+        else
+        {
+            SWR_ASSERT(false, "Unimplemented vector width.");
+            return nullptr;
+        }
     }
 
     // Double pump input using Intrin template arg. This blindly extracts lower and upper 256 from each vector argument and
