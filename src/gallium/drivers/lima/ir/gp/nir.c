@@ -108,6 +108,7 @@ static int nir_to_gpir_opcodes[nir_num_opcodes] = {
    [nir_op_fmax] = gpir_op_max,
    [nir_op_frcp] = gpir_op_rcp,
    [nir_op_frsq] = gpir_op_rsqrt,
+   [nir_op_slt] = gpir_op_lt,
 };
 
 static bool gpir_emit_alu(gpir_block *block, nir_instr *ni)
