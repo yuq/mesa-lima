@@ -45,6 +45,8 @@ const gpir_op_info gpir_op_infos[] = {
    [gpir_op_select] = {
       .name = "select",
       .dest_neg = true,
+      .slots = (int []) { GPIR_INSTR_SLOT_MUL0, GPIR_INSTR_SLOT_END },
+      .may_consume_two_slots = true,
    },
    [gpir_op_complex1] = {
       .name = "complex1",
