@@ -1828,24 +1828,18 @@ intel_init_bufmgr(struct intel_screen *screen)
 static bool
 intel_detect_swizzling(struct intel_screen *screen)
 {
-   struct brw_bo *buffer;
-   unsigned flags = 0;
-   uint32_t aligned_pitch;
    uint32_t tiling = I915_TILING_X;
    uint32_t swizzle_mode = 0;
-
-   buffer = brw_bo_alloc_tiled_2d(screen->bufmgr, "swizzle test",
-                                  64, 64, 4, tiling, &aligned_pitch, flags);
+   struct brw_bo *buffer =
+      brw_bo_alloc_tiled(screen->bufmgr, "swizzle test", 32768,
+                         tiling, 512, 0);
    if (buffer == NULL)
       return false;
 
    brw_bo_get_tiling(buffer, &tiling, &swizzle_mode);
    brw_bo_unreference(buffer);
 
-   if (swizzle_mode == I915_BIT_6_SWIZZLE_NONE)
-      return false;
-   else
-      return true;
+   return swizzle_mode != I915_BIT_6_SWIZZLE_NONE;
 }
 
 static int
