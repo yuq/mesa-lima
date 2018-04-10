@@ -196,6 +196,7 @@ static void gpir_codegen_add0_slot(gpir_codegen_instr *code, gpir_instr *instr)
    case gpir_op_add:
    case gpir_op_min:
    case gpir_op_max:
+   case gpir_op_lt:
       code->acc0_src0 = gpir_get_alu_input(node, alu->children[0]);
       code->acc0_src1 = gpir_get_alu_input(node, alu->children[1]);
 
@@ -219,6 +220,9 @@ static void gpir_codegen_add0_slot(gpir_codegen_instr *code, gpir_instr *instr)
          break;
       case gpir_op_max:
          code->acc_op = gpir_codegen_acc_op_max;
+         break;
+      case gpir_op_lt:
+         code->acc_op = gpir_codegen_acc_op_lt;
          break;
       default:
          assert(0);
@@ -256,6 +260,7 @@ static void gpir_codegen_add1_slot(gpir_codegen_instr *code, gpir_instr *instr)
    case gpir_op_add:
    case gpir_op_min:
    case gpir_op_max:
+   case gpir_op_lt:
       code->acc1_src0 = gpir_get_alu_input(node, alu->children[0]);
       code->acc1_src1 = gpir_get_alu_input(node, alu->children[1]);
 
@@ -279,6 +284,9 @@ static void gpir_codegen_add1_slot(gpir_codegen_instr *code, gpir_instr *instr)
          break;
       case gpir_op_max:
          code->acc_op = gpir_codegen_acc_op_max;
+         break;
+      case gpir_op_lt:
+         code->acc_op = gpir_codegen_acc_op_lt;
          break;
       default:
          assert(0);
@@ -538,6 +546,8 @@ static gpir_codegen_acc_op gpir_codegen_get_acc_op(gpir_op op)
       return gpir_codegen_acc_op_min;
    case gpir_op_max:
       return gpir_codegen_acc_op_max;
+   case gpir_op_lt:
+      return gpir_codegen_acc_op_lt;
    default:
       assert(0);
    }
