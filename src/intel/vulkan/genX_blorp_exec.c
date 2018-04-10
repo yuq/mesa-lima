@@ -64,7 +64,7 @@ blorp_surface_reloc(struct blorp_batch *batch, uint32_t ss_offset,
       anv_batch_set_error(&cmd_buffer->batch, result);
 }
 
-#if GEN_GEN >= 7 && GEN_GEN <= 10
+#if GEN_GEN >= 7 && GEN_GEN < 10
 static struct blorp_address
 blorp_get_surface_base_address(struct blorp_batch *batch)
 {

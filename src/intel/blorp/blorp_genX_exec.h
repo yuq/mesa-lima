@@ -78,7 +78,7 @@ static void
 blorp_surface_reloc(struct blorp_batch *batch, uint32_t ss_offset,
                     struct blorp_address address, uint32_t delta);
 
-#if GEN_GEN >= 7 && GEN_GEN <= 10
+#if GEN_GEN >= 7 && GEN_GEN < 10
 static struct blorp_address
 blorp_get_surface_base_address(struct blorp_batch *batch);
 #endif
@@ -1244,7 +1244,7 @@ blorp_emit_pipeline(struct blorp_batch *batch,
 
 #endif /* GEN_GEN >= 6 */
 
-#if GEN_GEN >= 7 && GEN_GEN <= 10
+#if GEN_GEN >= 7 && GEN_GEN < 10
 static void
 blorp_emit_memcpy(struct blorp_batch *batch,
                   struct blorp_address dst,
