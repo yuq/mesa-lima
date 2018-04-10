@@ -1729,13 +1729,14 @@ void ProcessDraw(
                     uint32_t offset;
                     offset = std::min(endVertex-i, (uint32_t) KNOB_SIMD16_WIDTH);
 #if USE_SIMD16_SHADERS
+                    offset *= 4; // convert from index to address
                     fetchInfo_lo.pLastIndex += offset;
 #else
-                    fetchInfo_lo.pLastIndex += std::min(offset, (uint32_t) KNOB_SIMD_WIDTH);
+                    fetchInfo_lo.pLastIndex += std::min(offset, (uint32_t) KNOB_SIMD_WIDTH) * 4; // * 4 for converting index to address
                     uint32_t offset2 = std::min(offset, (uint32_t) KNOB_SIMD16_WIDTH)-KNOB_SIMD_WIDTH;
                     assert(offset >= 0);
                     fetchInfo_hi.pLastIndex = fetchInfo_hi.pIndices;
-                    fetchInfo_hi.pLastIndex += offset2;
+                    fetchInfo_hi.pLastIndex += offset2 * 4; // * 4 for converting index to address
 #endif
                 }
                 // 1. Execute FS/VS for a single SIMD.
