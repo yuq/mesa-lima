@@ -129,6 +129,12 @@ static void gpir_codegen_mul0_slot(gpir_codegen_instr *code, gpir_instr *instr)
       code->mul_op = gpir_codegen_mul_op_complex2;
       break;
 
+   case gpir_op_select:
+      code->mul0_src0 = gpir_get_alu_input(node, alu->children[2]);
+      code->mul0_src1 = gpir_get_alu_input(node, alu->children[0]);
+      code->mul_op = gpir_codegen_mul_op_select;
+      break;
+
    default:
       assert(0);
    }
@@ -173,6 +179,11 @@ static void gpir_codegen_mul1_slot(gpir_codegen_instr *code, gpir_instr *instr)
    case gpir_op_complex1:
       code->mul1_src0 = gpir_get_alu_input(node, alu->children[0]);
       code->mul1_src1 = gpir_get_alu_input(node, alu->children[2]);
+      break;
+
+   case gpir_op_select:
+      code->mul1_src0 = gpir_get_alu_input(node, alu->children[1]);
+      code->mul1_src1 = gpir_codegen_src_unused;
       break;
 
    default:
