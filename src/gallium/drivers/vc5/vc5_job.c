@@ -394,7 +394,7 @@ vc5_job_submit(struct vc5_context *vc5, struct vc5_job *job)
         job->submit.rcl_end = job->rcl.bo->offset + cl_offset(&job->rcl);
 
         /* On V3D 4.1, the tile alloc/state setup moved to register writes
-         * instead of binner pac`kets.
+         * instead of binner packets.
          */
         if (screen->devinfo.ver >= 41) {
                 vc5_job_add_bo(job, job->tile_alloc);
