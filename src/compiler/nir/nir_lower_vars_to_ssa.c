@@ -406,36 +406,35 @@ register_copy_instr(nir_intrinsic_instr *copy_instr,
    }
 }
 
-/* Registers all variable uses in the given block. */
-static bool
-register_variable_uses_block(nir_block *block,
-                             struct lower_variables_state *state)
+static void
+register_variable_uses(nir_function_impl *impl,
+                       struct lower_variables_state *state)
 {
-   nir_foreach_instr_safe(instr, block) {
-      if (instr->type != nir_instr_type_intrinsic)
-         continue;
+   nir_foreach_block(block, impl) {
+      nir_foreach_instr_safe(instr, block) {
+         if (instr->type != nir_instr_type_intrinsic)
+            continue;
 
-      nir_intrinsic_instr *intrin = nir_instr_as_intrinsic(instr);
+         nir_intrinsic_instr *intrin = nir_instr_as_intrinsic(instr);
 
-      switch (intrin->intrinsic) {
-      case nir_intrinsic_load_var:
-         register_load_instr(intrin, state);
-         break;
+         switch (intrin->intrinsic) {
+         case nir_intrinsic_load_var:
+            register_load_instr(intrin, state);
+            break;
 
-      case nir_intrinsic_store_var:
-         register_store_instr(intrin, state);
-         break;
+         case nir_intrinsic_store_var:
+            register_store_instr(intrin, state);
+            break;
 
-      case nir_intrinsic_copy_var:
-         register_copy_instr(intrin, state);
-         break;
+         case nir_intrinsic_copy_var:
+            register_copy_instr(intrin, state);
+            break;
 
-      default:
-         continue;
+         default:
+            continue;
+         }
       }
    }
-
-   return true;
 }
 
 /* Walks over all of the copy instructions to or from the given deref_node
@@ -654,9 +653,7 @@ nir_lower_vars_to_ssa_impl(nir_function_impl *impl)
    /* Build the initial deref structures and direct_deref_nodes table */
    state.add_to_direct_deref_nodes = true;
 
-   nir_foreach_block(block, impl) {
-      register_variable_uses_block(block, &state);
-   }
+   register_variable_uses(impl, &state);
 
    bool progress = false;
 
@@ -696,9 +693,7 @@ nir_lower_vars_to_ssa_impl(nir_function_impl *impl)
     * added load/store instructions are registered.  We need this
     * information for phi node insertion below.
     */
-   nir_foreach_block(block, impl) {
-      register_variable_uses_block(block, &state);
-   }
+   register_variable_uses(impl, &state);
 
    state.phi_builder = nir_phi_builder_create(state.impl);
 
