@@ -735,6 +735,31 @@ void radv_GetPhysicalDeviceFeatures2(
 			features->samplerYcbcrConversion = false;
 			break;
 		}
+		case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT: {
+			VkPhysicalDeviceDescriptorIndexingFeaturesEXT *features =
+				(VkPhysicalDeviceDescriptorIndexingFeaturesEXT*)features;
+			features->shaderInputAttachmentArrayDynamicIndexing = true;
+			features->shaderUniformTexelBufferArrayDynamicIndexing = true;
+			features->shaderStorageTexelBufferArrayDynamicIndexing = true;
+			features->shaderUniformBufferArrayNonUniformIndexing = false;
+			features->shaderSampledImageArrayNonUniformIndexing = false;
+			features->shaderStorageBufferArrayNonUniformIndexing = false;
+			features->shaderStorageImageArrayNonUniformIndexing = false;
+			features->shaderInputAttachmentArrayNonUniformIndexing = false;
+			features->shaderUniformTexelBufferArrayNonUniformIndexing = false;
+			features->shaderStorageTexelBufferArrayNonUniformIndexing = false;
+			features->descriptorBindingUniformBufferUpdateAfterBind = true;
+			features->descriptorBindingSampledImageUpdateAfterBind = true;
+			features->descriptorBindingStorageImageUpdateAfterBind = true;
+			features->descriptorBindingStorageBufferUpdateAfterBind = true;
+			features->descriptorBindingUniformTexelBufferUpdateAfterBind = true;
+			features->descriptorBindingStorageTexelBufferUpdateAfterBind = true;
+			features->descriptorBindingUpdateUnusedWhilePending = true;
+			features->descriptorBindingPartiallyBound = true;
+			features->descriptorBindingVariableDescriptorCount = true;
+			features->runtimeDescriptorArray = true;
+			break;
+		}
 		default:
 			break;
 		}
@@ -1012,6 +1037,41 @@ void radv_GetPhysicalDeviceProperties2(
 			VkPhysicalDeviceVertexAttributeDivisorPropertiesEXT *properties =
 				(VkPhysicalDeviceVertexAttributeDivisorPropertiesEXT *)ext;
 			properties->maxVertexAttribDivisor = UINT32_MAX;
+			break;
+		}
+		case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_PROPERTIES_EXT: {
+			VkPhysicalDeviceDescriptorIndexingPropertiesEXT *properties =
+				(VkPhysicalDeviceDescriptorIndexingPropertiesEXT*)ext;
+			properties->maxUpdateAfterBindDescriptorsInAllPools = UINT32_MAX / 64;
+			properties->shaderUniformBufferArrayNonUniformIndexingNative = false;
+			properties->shaderSampledImageArrayNonUniformIndexingNative = false;
+			properties->shaderStorageBufferArrayNonUniformIndexingNative = false;
+			properties->shaderStorageImageArrayNonUniformIndexingNative = false;
+			properties->shaderInputAttachmentArrayNonUniformIndexingNative = false;
+			properties->robustBufferAccessUpdateAfterBind = false;
+			properties->quadDivergentImplicitLod = false;
+
+			size_t max_descriptor_set_size = ((1ull << 31) - 16 * MAX_DYNAMIC_BUFFERS) /
+			          (32 /* uniform buffer, 32 due to potential space wasted on alignment */ +
+			           32 /* storage buffer, 32 due to potential space wasted on alignment */ +
+			           32 /* sampler, largest when combined with image */ +
+			           64 /* sampled image */ +
+			           64 /* storage image */);
+			properties->maxPerStageDescriptorUpdateAfterBindSamplers = max_descriptor_set_size;
+			properties->maxPerStageDescriptorUpdateAfterBindUniformBuffers = max_descriptor_set_size;
+			properties->maxPerStageDescriptorUpdateAfterBindStorageBuffers = max_descriptor_set_size;
+			properties->maxPerStageDescriptorUpdateAfterBindSampledImages = max_descriptor_set_size;
+			properties->maxPerStageDescriptorUpdateAfterBindStorageImages = max_descriptor_set_size;
+			properties->maxPerStageDescriptorUpdateAfterBindInputAttachments = max_descriptor_set_size;
+			properties->maxPerStageUpdateAfterBindResources = max_descriptor_set_size;
+			properties->maxDescriptorSetUpdateAfterBindSamplers = max_descriptor_set_size;
+			properties->maxDescriptorSetUpdateAfterBindUniformBuffers = max_descriptor_set_size;
+			properties->maxDescriptorSetUpdateAfterBindUniformBuffersDynamic = MAX_DYNAMIC_UNIFORM_BUFFERS;
+			properties->maxDescriptorSetUpdateAfterBindStorageBuffers = max_descriptor_set_size;
+			properties->maxDescriptorSetUpdateAfterBindStorageBuffersDynamic = MAX_DYNAMIC_STORAGE_BUFFERS;
+			properties->maxDescriptorSetUpdateAfterBindSampledImages = max_descriptor_set_size;
+			properties->maxDescriptorSetUpdateAfterBindStorageImages = max_descriptor_set_size;
+			properties->maxDescriptorSetUpdateAfterBindInputAttachments = max_descriptor_set_size;
 			break;
 		}
 		default:
