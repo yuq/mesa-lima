@@ -217,45 +217,42 @@ get_deref_node(nir_deref_var *deref, struct lower_variables_state *state)
 }
 
 /* \sa foreach_deref_node_match */
-static bool
+static void
 foreach_deref_node_worker(struct deref_node *node, nir_deref *deref,
-                          bool (* cb)(struct deref_node *node,
+                          void (* cb)(struct deref_node *node,
                                       struct lower_variables_state *state),
                           struct lower_variables_state *state)
 {
    if (deref->child == NULL) {
-      return cb(node, state);
-   } else {
-      switch (deref->child->deref_type) {
-      case nir_deref_type_array: {
-         nir_deref_array *arr = nir_deref_as_array(deref->child);
-         assert(arr->deref_array_type == nir_deref_array_type_direct);
-         if (node->children[arr->base_offset] &&
-             !foreach_deref_node_worker(node->children[arr->base_offset],
-                                        deref->child, cb, state))
-            return false;
+      cb(node, state);
+      return;
+   }
 
-         if (node->wildcard &&
-             !foreach_deref_node_worker(node->wildcard,
-                                        deref->child, cb, state))
-            return false;
+   switch (deref->child->deref_type) {
+   case nir_deref_type_array: {
+      nir_deref_array *arr = nir_deref_as_array(deref->child);
+      assert(arr->deref_array_type == nir_deref_array_type_direct);
 
-         return true;
+      if (node->children[arr->base_offset]) {
+         foreach_deref_node_worker(node->children[arr->base_offset],
+                                   deref->child, cb, state);
       }
+      if (node->wildcard)
+         foreach_deref_node_worker(node->wildcard, deref->child, cb, state);
+      break;
+   }
 
-      case nir_deref_type_struct: {
-         nir_deref_struct *str = nir_deref_as_struct(deref->child);
-         if (node->children[str->index] &&
-             !foreach_deref_node_worker(node->children[str->index],
-                                        deref->child, cb, state))
-            return false;
-
-         return true;
+   case nir_deref_type_struct: {
+      nir_deref_struct *str = nir_deref_as_struct(deref->child);
+      if (node->children[str->index]) {
+         foreach_deref_node_worker(node->children[str->index],
+                                   deref->child, cb, state);
       }
+      break;
+   }
 
-      default:
-         unreachable("Invalid deref child type");
-      }
+   default:
+      unreachable("Invalid deref child type");
    }
 }
 
@@ -271,9 +268,9 @@ foreach_deref_node_worker(struct deref_node *node, nir_deref *deref,
  * The given deref must be a full-length and fully qualified (no wildcards
  * or indirects) deref chain.
  */
-static bool
+static void
 foreach_deref_node_match(nir_deref_var *deref,
-                         bool (* cb)(struct deref_node *node,
+                         void (* cb)(struct deref_node *node,
                                      struct lower_variables_state *state),
                          struct lower_variables_state *state)
 {
@@ -282,9 +279,9 @@ foreach_deref_node_match(nir_deref_var *deref,
    struct deref_node *node = get_deref_node(&var_deref, state);
 
    if (node == NULL)
-      return false;
+      return;
 
-   return foreach_deref_node_worker(node, &deref->deref, cb, state);
+   foreach_deref_node_worker(node, &deref->deref, cb, state);
 }
 
 /* \sa deref_may_be_aliased */
@@ -441,12 +438,12 @@ register_variable_uses(nir_function_impl *impl,
 /* Walks over all of the copy instructions to or from the given deref_node
  * and lowers them to load/store intrinsics.
  */
-static bool
+static void
 lower_copies_to_load_store(struct deref_node *node,
                            struct lower_variables_state *state)
 {
    if (!node->copies)
-      return true;
+      return;
 
    struct set_entry *copy_entry;
    set_foreach(node->copies, copy_entry) {
@@ -471,8 +468,6 @@ lower_copies_to_load_store(struct deref_node *node,
    }
 
    node->copies = NULL;
-
-   return true;
 }
 
 /* Performs variable renaming
