@@ -3390,6 +3390,10 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
          spv_check_supported(descriptor_array_dynamic_indexing, cap);
          break;
 
+      case SpvCapabilityRuntimeDescriptorArrayEXT:
+         spv_check_supported(runtime_descriptor_array, cap);
+         break;
+
       default:
          vtn_fail("Unhandled capability");
       }
