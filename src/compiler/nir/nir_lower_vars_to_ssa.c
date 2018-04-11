@@ -298,14 +298,15 @@ deref_may_be_aliased_node(struct deref_node *node, nir_deref *deref,
       switch (deref->child->deref_type) {
       case nir_deref_type_array: {
          nir_deref_array *arr = nir_deref_as_array(deref->child);
-         if (arr->deref_array_type == nir_deref_array_type_indirect)
-            return true;
+
+         /* This is a child of one of the derefs in direct_deref_nodes,
+          * so we know it is direct.
+          */
+         assert(arr->deref_array_type == nir_deref_array_type_direct);
 
          /* If there is an indirect at this level, we're aliased. */
          if (node->indirect)
             return true;
-
-         assert(arr->deref_array_type == nir_deref_array_type_direct);
 
          if (node->children[arr->base_offset] &&
              deref_may_be_aliased_node(node->children[arr->base_offset],
