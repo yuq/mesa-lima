@@ -1004,8 +1004,31 @@ dimensions_error_check(struct gl_context *ctx,
 
    texImage = select_tex_image(texObj, target, level, zoffset);
    if (!texImage) {
-      /* missing texture image */
-      _mesa_error(ctx, GL_INVALID_OPERATION, "%s(missing image)", caller);
+      /* Trying to return a non-defined level is a valid operation per se, as
+       * OpenGL 4.6 spec, section 8.11.4 ("Texture Image Queries") does not
+       * handle this case as an error.
+       *
+       * Rather, we need to look at section 8.22 ("Texture State and Proxy
+       * State"):
+       *
+       *   "Each initial texture image is null. It has zero width, height, and
+       *    depth, internal format RGBA, or R8 for buffer textures, component
+       *    sizes set to zero and component types set to NONE, the compressed
+       *    flag set to FALSE, a zero compressed size, and the bound buffer
+       *    object name is zero."
+       *
+       * This means we need to assume the image for the non-defined level is
+       * an empty image. With this assumption, we can go back to section
+       * 8.11.4 and checking again the errors:
+       *
+       *   "An INVALID_VALUE error is generated if xoffset + width is greater
+       *    than the texture’s width, yoffset + height is greater than the
+       *    texture’s height, or zoffset + depth is greater than the texture’s
+       *    depth."
+       *
+       * Thus why we return INVALID_VALUE.
+       */
+      _mesa_error(ctx, GL_INVALID_VALUE, "%s(missing image)", caller);
       return true;
    }
 
