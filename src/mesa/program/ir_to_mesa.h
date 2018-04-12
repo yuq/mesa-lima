@@ -31,6 +31,7 @@ extern "C" {
 #endif
 
 struct gl_context;
+struct gl_program;
 struct gl_shader;
 struct gl_shader_program;
 struct gl_linked_shader;

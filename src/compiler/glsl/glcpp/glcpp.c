@@ -27,6 +27,7 @@
 #include <getopt.h>
 
 #include "glcpp.h"
+#include "main/mtypes.h"
 #include "main/shaderobj.h"
 #include "util/strtod.h"
 
