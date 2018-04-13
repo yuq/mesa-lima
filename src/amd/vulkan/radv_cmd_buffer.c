@@ -3718,6 +3718,9 @@ static void radv_handle_depth_image_transition(struct radv_cmd_buffer *cmd_buffe
 					       const VkImageSubresourceRange *range,
 					       VkImageAspectFlags pending_clears)
 {
+	if (!radv_image_has_htile(image))
+		return;
+
 	if (dst_layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL &&
 	    (pending_clears & vk_format_aspects(image->vk_format)) == vk_format_aspects(image->vk_format) &&
 	    cmd_buffer->state.render_area.offset.x == 0 && cmd_buffer->state.render_area.offset.y == 0 &&
@@ -3867,18 +3870,24 @@ static void radv_handle_image_transition(struct radv_cmd_buffer *cmd_buffer,
 			return;
 	}
 
-	unsigned src_queue_mask = radv_image_queue_family_mask(image, src_family, cmd_buffer->queue_family_index);
-	unsigned dst_queue_mask = radv_image_queue_family_mask(image, dst_family, cmd_buffer->queue_family_index);
+	unsigned src_queue_mask =
+		radv_image_queue_family_mask(image, src_family,
+					     cmd_buffer->queue_family_index);
+	unsigned dst_queue_mask =
+		radv_image_queue_family_mask(image, dst_family,
+					     cmd_buffer->queue_family_index);
 
-	if (radv_image_has_htile(image))
-		radv_handle_depth_image_transition(cmd_buffer, image, src_layout,
-						   dst_layout, src_queue_mask,
-						   dst_queue_mask, range,
-						   pending_clears);
-
-	radv_handle_color_image_transition(cmd_buffer, image, src_layout,
-					   dst_layout, src_queue_mask,
-					   dst_queue_mask, range);
+	if (vk_format_is_depth(image->vk_format)) {
+		radv_handle_depth_image_transition(cmd_buffer, image,
+						   src_layout, dst_layout,
+						   src_queue_mask, dst_queue_mask,
+						   range, pending_clears);
+	} else {
+		radv_handle_color_image_transition(cmd_buffer, image,
+						   src_layout, dst_layout,
+						   src_queue_mask, dst_queue_mask,
+						   range);
+	}
 }
 
 void radv_CmdPipelineBarrier(
