@@ -1,0 +1,4 @@
+[wrap-git]
+directory=libdrm
+url=https://anongit.freedesktop.org/git/mesa/drm.git
+revision=head
