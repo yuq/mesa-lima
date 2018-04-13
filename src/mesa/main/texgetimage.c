@@ -913,7 +913,6 @@ dimensions_error_check(struct gl_context *ctx,
                        const char *caller)
 {
    const struct gl_texture_image *texImage;
-   int i;
 
    if (xoffset < 0) {
       _mesa_error(ctx, GL_INVALID_VALUE, "%s(xoffset = %d)", caller, xoffset);
