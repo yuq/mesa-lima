@@ -3753,8 +3753,8 @@ static void radv_handle_depth_image_transition(struct radv_cmd_buffer *cmd_buffe
 	}
 }
 
-void radv_initialise_cmask(struct radv_cmd_buffer *cmd_buffer,
-			   struct radv_image *image, uint32_t value)
+static void radv_initialise_cmask(struct radv_cmd_buffer *cmd_buffer,
+				  struct radv_image *image, uint32_t value)
 {
 	struct radv_cmd_state *state = &cmd_buffer->state;
 
