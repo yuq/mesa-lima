@@ -30,13 +30,18 @@
 
 #include <stdio.h>
 #include <errno.h>
-#include <unistd.h>
-#include <sys/stat.h>
 
 #include "c99_alloca.h"
 #include "os/os_process.h"
 #include "util/u_atomic.h"
 #include "util/u_debug.h"
+
+#include "pipe/p_config.h"
+#ifdef PIPE_OS_UNIX
+#include <unistd.h>
+#include <sys/stat.h>
+#endif
+
 
 /* name of the directory in home */
 #define DD_DIR "ddebug_dumps"

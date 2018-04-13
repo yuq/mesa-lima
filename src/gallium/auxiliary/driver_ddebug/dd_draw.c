@@ -37,6 +37,7 @@
 #include "tgsi/tgsi_scan.h"
 #include "util/os_time.h"
 #include <inttypes.h>
+#include "pipe/p_config.h"
 
 
 static void
@@ -69,6 +70,7 @@ dd_get_file_stream(struct dd_screen *dscreen, unsigned apitrace_call_number)
 static void
 dd_dump_dmesg(FILE *f)
 {
+#ifdef PIPE_OS_LINUX
    char line[2000];
    FILE *p = popen("dmesg | tail -n60", "r");
 
@@ -80,6 +82,7 @@ dd_dump_dmesg(FILE *f)
       fputs(line, f);
 
    pclose(p);
+#endif
 }
 
 static unsigned
@@ -611,7 +614,9 @@ dd_dump_call(FILE *f, struct dd_draw_state *state, struct dd_call *call)
 static void
 dd_kill_process(void)
 {
+#ifdef PIPE_OS_UNIX
    sync();
+#endif
    fprintf(stderr, "dd: Aborting the process...\n");
    fflush(stdout);
    fflush(stderr);
