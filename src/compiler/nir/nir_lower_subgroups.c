@@ -359,7 +359,7 @@ lower_subgroups_intrin(nir_builder *b, nir_intrinsic_instr *intrin,
          assert(intrin->src[1].is_ssa);
          return nir_i2b(b, nir_iand(b, nir_ushr(b, int_val,
                                                    intrin->src[1].ssa),
-                                       nir_imm_int(b, 1)));
+                                       nir_imm_intN_t(b, 1, options->ballot_bit_size)));
       case nir_intrinsic_ballot_bit_count_reduce:
          return nir_bit_count(b, int_val);
       case nir_intrinsic_ballot_find_lsb:
