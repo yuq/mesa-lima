@@ -201,6 +201,7 @@ if with_swr_arches.contains('avx')
     link_args : [ld_args_gc_sections],
     include_directories : [swr_incs],
     dependencies : [dep_thread, dep_llvm],
+    version : '0.0.0',
     install : true,
   )
 endif
@@ -233,6 +234,7 @@ if with_swr_arches.contains('avx2')
     link_args : [ld_args_gc_sections],
     include_directories : [swr_incs],
     dependencies : [dep_thread, dep_llvm],
+    version : '0.0.0',
     install : true,
   )
 endif
@@ -260,6 +262,7 @@ if with_swr_arches.contains('knl')
     link_args : [ld_args_gc_sections],
     include_directories : [swr_incs],
     dependencies : [dep_thread, dep_llvm],
+    version : '0.0.0',
     install : true,
   )
 endif
@@ -284,6 +287,7 @@ if with_swr_arches.contains('skx')
     link_args : [ld_args_gc_sections],
     include_directories : [swr_incs],
     dependencies : [dep_thread, dep_llvm],
+    version : '0.0.0',
     install : true,
   )
 endif
