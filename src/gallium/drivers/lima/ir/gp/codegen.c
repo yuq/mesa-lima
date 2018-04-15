@@ -245,6 +245,18 @@ static void gpir_codegen_add0_slot(gpir_codegen_instr *code, gpir_instr *instr)
 
       break;
 
+   case gpir_op_floor:
+      code->acc0_src0 = gpir_get_alu_input(node, alu->children[0]);
+      code->acc0_src0_neg = alu->children_negate[0];
+      switch (node->op) {
+      case gpir_op_floor:
+         code->acc_op = gpir_codegen_acc_op_floor;
+         break;
+      default:
+         assert(0);
+      }
+      break;
+
    case gpir_op_neg:
       code->acc0_src0_neg = true;
    case gpir_op_mov:
@@ -311,6 +323,18 @@ static void gpir_codegen_add1_slot(gpir_codegen_instr *code, gpir_instr *instr)
          assert(0);
       }
 
+      break;
+
+   case gpir_op_floor:
+      code->acc1_src0 = gpir_get_alu_input(node, alu->children[0]);
+      code->acc1_src0_neg = alu->children_negate[0];
+      switch (node->op) {
+      case gpir_op_floor:
+         code->acc_op = gpir_codegen_acc_op_floor;
+         break;
+      default:
+         assert(0);
+      }
       break;
 
    case gpir_op_neg:
@@ -569,6 +593,8 @@ static gpir_codegen_acc_op gpir_codegen_get_acc_op(gpir_op op)
       return gpir_codegen_acc_op_lt;
    case gpir_op_ge:
       return gpir_codegen_acc_op_ge;
+   case gpir_op_floor:
+      return gpir_codegen_acc_op_floor;
    default:
       assert(0);
    }
