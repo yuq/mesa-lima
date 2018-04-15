@@ -111,6 +111,7 @@ static int nir_to_gpir_opcodes[nir_num_opcodes] = {
    [nir_op_slt] = gpir_op_lt,
    [nir_op_sge] = gpir_op_ge,
    [nir_op_bcsel] = gpir_op_select,
+   [nir_op_ffloor] = gpir_op_floor,
 };
 
 static bool gpir_emit_alu(gpir_block *block, nir_instr *ni)
