@@ -40,6 +40,7 @@ LOCAL_LDFLAGS := \
 	-Wl,--undefined-version
 
 LOCAL_SHARED_LIBRARIES := \
+	libbacktrace \
 	libdl \
 	libglapi \
 	libexpat \
