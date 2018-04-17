@@ -133,8 +133,12 @@ radv_use_dcc_for_image(struct radv_device *device,
 	if (create_info->scanout)
 		return false;
 
+	/* FIXME: DCC for MSAA with 4x and 8x samples doesn't work yet. */
+	if (pCreateInfo->samples > 2)
+		return false;
+
 	/* TODO: Enable DCC for MSAA textures. */
-	if (pCreateInfo->samples >= 2)
+	if (!device->physical_device->dcc_msaa_allowed)
 		return false;
 
 	/* Determine if the formats are DCC compatible. */

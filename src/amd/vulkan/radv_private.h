@@ -295,6 +295,9 @@ struct radv_physical_device {
 	bool has_out_of_order_rast;
 	bool out_of_order_rast_allowed;
 
+	/* Whether DCC should be enabled for MSAA textures. */
+	bool dcc_msaa_allowed;
+
 	/* This is the drivers on-disk cache used as a fallback as opposed to
 	 * the pipeline cache defined by apps.
 	 */
