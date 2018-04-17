@@ -516,5 +516,8 @@ radv_cmd_buffer_resolve_subpass_cs(struct radv_cmd_buffer *cmd_buffer)
 			     &(VkExtent2D) { fb->width, fb->height });
 	}
 
+	cmd_buffer->state.flush_bits |= RADV_CMD_FLAG_CS_PARTIAL_FLUSH |
+	                                RADV_CMD_FLAG_INV_VMEM_L1;
+
 	radv_meta_restore(&saved_state, cmd_buffer);
 }
