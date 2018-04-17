@@ -997,6 +997,13 @@ radv_image_create(VkDevice _device,
 		/* Try to enable DCC first. */
 		if (radv_image_can_enable_dcc(image)) {
 			radv_image_alloc_dcc(image);
+			if (image->info.samples > 1) {
+				/* CMASK should be enabled because DCC fast
+				 * clear with MSAA needs it.
+				 */
+				assert(radv_image_can_enable_cmask(image));
+				radv_image_alloc_cmask(device, image);
+			}
 		} else {
 			/* When DCC cannot be enabled, try CMASK. */
 			image->surface.dcc_size = 0;
