@@ -1066,10 +1066,7 @@ foreach d : _libdrm_checks
   if d[1]
     set_variable(
       'dep_libdrm_' + d[0],
-      dependency(
-        'libdrm_' + d[0], version : '>=' + _drm_ver,
-        fallback : ['libdrm', 'ext_libdrm_' + d[0]]
-      )
+      dependency('libdrm_' + d[0], version : '>=' + _drm_ver)
     )
   endif
 endforeach
@@ -1077,8 +1074,7 @@ endforeach
 with_gallium_drisw_kms = false
 dep_libdrm = dependency(
   'libdrm', version : '>=' + _drm_ver,
-  required : with_dri2 or with_dri3,
-  fallback : ['libdrm', 'ext_libdrm']
+  required : with_dri2 or with_dri3
 )
 if dep_libdrm.found()
   pre_args += '-DHAVE_LIBDRM'
