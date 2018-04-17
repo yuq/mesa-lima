@@ -1062,6 +1062,15 @@ emit_fast_color_clear(struct radv_cmd_buffer *cmd_buffer,
 
 		if (iview->image->info.samples > 1) {
 			/* DCC fast clear with MSAA should clear CMASK. */
+			/* FIXME: This doesn't work for now. There is a
+			 * hardware bug with fast clears and DCC for MSAA
+			 * textures. AMDVLK has a workaround but it doesn't
+			 * seem to work here. Note that we might emit useless
+			 * CB flushes but that shouldn't matter.
+			 */
+			if (!can_avoid_fast_clear_elim)
+				goto fail;
+
 			assert(radv_image_has_cmask(iview->image));
 
 			flush_bits = radv_clear_cmask(cmd_buffer, iview->image,
