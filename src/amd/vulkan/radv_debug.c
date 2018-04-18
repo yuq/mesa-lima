@@ -29,6 +29,7 @@
 #include <stdio.h>
 #include <sys/utsname.h>
 
+#include "util/mesa-sha1.h"
 #include "sid.h"
 #include "gfx9d.h"
 #include "ac_debug.h"
@@ -496,7 +497,13 @@ radv_dump_shader(struct radv_pipeline *pipeline,
 	fprintf(f, "%s:\n\n", radv_get_shader_name(shader, stage));
 
 	if (shader->spirv) {
-		fprintf(f, "SPIRV:\n");
+		unsigned char sha1[21];
+		char sha1buf[41];
+
+		_mesa_sha1_compute(shader->spirv, shader->spirv_size, sha1);
+		_mesa_sha1_format(sha1buf, sha1);
+
+		fprintf(f, "SPIRV (sha1: %s):\n", sha1buf);
 		radv_print_spirv(shader->spirv, shader->spirv_size, f);
 	}
 
