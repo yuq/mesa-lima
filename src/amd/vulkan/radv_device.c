@@ -101,6 +101,7 @@ radv_get_device_name(enum radeon_family family, char *name, size_t name_len)
 	case CHIP_POLARIS11: chip_string = "AMD RADV POLARIS11"; break;
 	case CHIP_POLARIS12: chip_string = "AMD RADV POLARIS12"; break;
 	case CHIP_STONEY: chip_string = "AMD RADV STONEY"; break;
+	case CHIP_VEGAM: chip_string = "AMD RADV VEGA M"; break;
 	case CHIP_VEGA10: chip_string = "AMD RADV VEGA10"; break;
 	case CHIP_VEGA12: chip_string = "AMD RADV VEGA12"; break;
 	case CHIP_RAVEN: chip_string = "AMD RADV RAVEN"; break;
@@ -1017,7 +1018,8 @@ void radv_GetPhysicalDeviceProperties2(
 				pdevice->rad_info.family == CHIP_ICELAND ||
 				pdevice->rad_info.family == CHIP_POLARIS10 ||
 				pdevice->rad_info.family == CHIP_POLARIS11 ||
-				pdevice->rad_info.family == CHIP_POLARIS12 ? 8 : 10;
+				pdevice->rad_info.family == CHIP_POLARIS12 ||
+				pdevice->rad_info.family == CHIP_VEGAM ? 8 : 10;
 			properties->wavefrontSize = 64;
 
 			/* SGPR. */
@@ -1358,6 +1360,7 @@ radv_device_init_gs_info(struct radv_device *device)
 	case CHIP_POLARIS10:
 	case CHIP_POLARIS11:
 	case CHIP_POLARIS12:
+	case CHIP_VEGAM:
 	case CHIP_VEGA10:
 	case CHIP_VEGA12:
 	case CHIP_RAVEN:
