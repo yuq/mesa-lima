@@ -670,6 +670,9 @@ struct radv_device {
 
 	struct radv_device_extension_table enabled_extensions;
 
+	/* Whether the driver uses a global BO list. */
+	bool use_global_bo_list;
+
 	struct radv_bo_list bo_list;
 };
 
