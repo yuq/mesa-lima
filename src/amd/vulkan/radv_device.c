@@ -386,6 +386,7 @@ static const struct debug_control radv_debug_options[] = {
 	{"syncshaders", RADV_DEBUG_SYNC_SHADERS},
 	{"nosisched", RADV_DEBUG_NO_SISCHED},
 	{"preoptir", RADV_DEBUG_PREOPTIR},
+	{"nodynamicbounds", RADV_DEBUG_NO_DYNAMIC_BOUNDS},
 	{NULL, 0}
 };
 
