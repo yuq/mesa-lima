@@ -698,6 +698,8 @@ struct radv_descriptor_set {
 	uint64_t va;
 	uint32_t *mapped_ptr;
 	struct radv_descriptor_range *dynamic_descriptors;
+
+	struct radeon_winsys_bo *descriptors[0];
 };
 
 struct radv_push_descriptor_set
