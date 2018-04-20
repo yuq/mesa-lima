@@ -231,10 +231,12 @@ lima_context_create(struct pipe_screen *pscreen, void *priv, unsigned flags)
          plb_gp_stream[j] = ctx->plb[i]->va + LIMA_CTX_PLB_BLK_SIZE * j;
    }
 
-   ctx->plb_pp_stream = _mesa_hash_table_create(
-      ctx, plb_pp_stream_hash, plb_pp_stream_compare);
-   if (!ctx->plb_pp_stream)
-      goto err_out;
+   if (screen->gpu_type == LIMA_INFO_GPU_MALI400) {
+      ctx->plb_pp_stream = _mesa_hash_table_create(
+         ctx, plb_pp_stream_hash, plb_pp_stream_compare);
+      if (!ctx->plb_pp_stream)
+         goto err_out;
+   }
 
    ctx->gp_submit = lima_submit_create(ctx, LIMA_PIPE_GP);
    if (!ctx->gp_submit)
