@@ -117,6 +117,7 @@ static int nir_to_ppir_opcodes[nir_num_opcodes] = {
    /* not supported */
    [0 ... nir_last_opcode] = -1,
 
+   [nir_op_fmov] = ppir_op_mov,
    [nir_op_imov] = ppir_op_mov,
    [nir_op_fmul] = ppir_op_mul,
    [nir_op_fadd] = ppir_op_add,
