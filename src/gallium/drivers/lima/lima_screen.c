@@ -333,7 +333,7 @@ lima_screen_parse_env(void)
       else if (!strcmp("pp", shader_debug))
          lima_shader_debug_pp = true;
       else
-         fprintf(stderr, "lima: unsupport LIMA_SHADER_DEBUG value %s\n",
+         fprintf(stderr, "lima: unsupported LIMA_SHADER_DEBUG value %s\n",
                  shader_debug);
 
       if (lima_shader_debug_gp)
