@@ -864,21 +864,25 @@ lima_update_submit_bo(struct lima_context *ctx)
          ctx->plb_gp_size, false, "gp plb stream at va %x\n",
          ctx->plb_gp_stream->va + ctx->plb_index * ctx->plb_gp_size);
 
-      struct lima_ctx_plb_pp_stream_key key = {
-         .plb_index = ctx->plb_index,
-         .tiled_w = ctx->framebuffer.tiled_w,
-         .tiled_h = ctx->framebuffer.tiled_h,
-      };
-      struct hash_entry *entry =
-         _mesa_hash_table_search(ctx->plb_pp_stream, &key);
-      struct lima_ctx_plb_pp_stream *s = entry->data;
-      lima_update_plb(ctx, s);
-      ctx->current_plb_pp_stream = s;
+      if (ctx->plb_pp_stream) {
+         struct lima_ctx_plb_pp_stream_key key = {
+            .plb_index = ctx->plb_index,
+            .tiled_w = ctx->framebuffer.tiled_w,
+            .tiled_h = ctx->framebuffer.tiled_h,
+         };
+
+         struct hash_entry *entry =
+            _mesa_hash_table_search(ctx->plb_pp_stream, &key);
+         struct lima_ctx_plb_pp_stream *s = entry->data;
+         lima_update_plb(ctx, s);
+         ctx->current_plb_pp_stream = s;
+
+         lima_submit_add_bo(ctx->pp_submit, s->bo, LIMA_SUBMIT_BO_READ);
+      }
 
       struct lima_resource *res = lima_resource(ctx->framebuffer.cbuf->texture);
       lima_submit_add_bo(ctx->pp_submit, res->bo, LIMA_SUBMIT_BO_WRITE);
       lima_submit_add_bo(ctx->pp_submit, ctx->plb[ctx->plb_index], LIMA_SUBMIT_BO_READ);
-      lima_submit_add_bo(ctx->pp_submit, s->bo, LIMA_SUBMIT_BO_READ);
       lima_submit_add_bo(ctx->pp_submit, screen->pp_buffer, LIMA_SUBMIT_BO_READ);
    }
 }
@@ -952,6 +956,50 @@ lima_finish_plbu_cmd(struct lima_context *ctx)
    ctx->plbu_cmd_array.size += i * 4;
 }
 
+static void
+lima_pack_pp_frame_reg(struct lima_context *ctx,
+                       struct drm_lima_pp_frame_reg *frame,
+                       struct drm_lima_pp_wb_reg *wb)
+{
+   struct lima_resource *res = lima_resource(ctx->framebuffer.cbuf->texture);
+   lima_bo_update(res->bo, false, true);
+
+   bool swap_channels = false;
+   switch (ctx->framebuffer.cbuf->format) {
+   case PIPE_FORMAT_R8G8B8A8_UNORM:
+   case PIPE_FORMAT_R8G8B8X8_UNORM:
+      swap_channels = true;
+      break;
+   default:
+      break;
+   }
+
+   struct lima_screen *screen = lima_screen(ctx->base.screen);
+   frame->render_address = screen->pp_buffer->va + pp_frame_rsw_offset;
+   frame->flags = 0x02;
+   //frame->clear_value_depth = ctx->clear.depth;
+   frame->clear_value_depth = 0x00FFFFFF;
+   frame->clear_value_stencil = ctx->clear.stencil;
+   frame->clear_value_color = ctx->clear.color;
+   frame->clear_value_color_1 = ctx->clear.color;
+   frame->clear_value_color_2 = ctx->clear.color;
+   frame->clear_value_color_3 = ctx->clear.color;
+   frame->one = 1;
+   frame->supersampled_height = ctx->framebuffer.height * 2 - 1;
+   frame->dubya = 0x77;
+   frame->onscreen = 1;
+   frame->blocking = (ctx->framebuffer.shift_max << 28) |
+      (ctx->framebuffer.shift_h << 16) | ctx->framebuffer.shift_w;
+   frame->scale = 0xE0C;
+   frame->foureight = 0x8888;
+
+   wb[0].type = 0x02; /* 1 for depth, stencil */
+   wb[0].address = res->bo->va;
+   wb[0].pixel_format = 0x03; /* BGRA8888 */
+   wb[0].pitch = res->stride / 8;
+   wb[0].mrt_bits = swap_channels ? 0x4 : 0x0;
+}
+
 void
 lima_flush(struct lima_context *ctx)
 {
@@ -1018,85 +1066,42 @@ lima_flush(struct lima_context *ctx)
          fprintf(stderr, "gp submit wait error\n");
    }
 
-   struct lima_resource *res = lima_resource(ctx->framebuffer.cbuf->texture);
-   lima_bo_update(res->bo, false, true);
+   if (screen->gpu_type == LIMA_INFO_GPU_MALI400) {
+      struct drm_lima_m400_pp_frame pp_frame = {0};
+      lima_pack_pp_frame_reg(ctx, &pp_frame.frame, pp_frame.wb);
+      pp_frame.num_pp = screen->num_pp;
 
-   int num_pp = screen->num_pp;
-   bool swap_channels = false;
-   switch (ctx->framebuffer.cbuf->format) {
-   case PIPE_FORMAT_R8G8B8A8_UNORM:
-   case PIPE_FORMAT_R8G8B8X8_UNORM:
-      swap_channels = true;
-      break;
-   default:
-      break;
+      lima_dump_command_stream_print(
+         &pp_frame, sizeof(pp_frame), false, "add pp frame\n");
+
+      struct lima_ctx_plb_pp_stream *s = ctx->current_plb_pp_stream;
+      for (int i = 0; i < screen->num_pp; i++)
+         pp_frame.plbu_array_address[i] = s->bo->va + s->offset[i];
+
+      if (!lima_submit_start(ctx->pp_submit, &pp_frame, sizeof(pp_frame)))
+         fprintf(stderr, "pp submit error\n");
+
+      ctx->current_plb_pp_stream = NULL;
    }
-   struct drm_lima_m400_pp_frame pp_frame = {
-      .frame = {
-         .plbu_array_address = 0,
-         .render_address = screen->pp_buffer->va + pp_frame_rsw_offset,
-         .unused_0 = 0,
-         .flags = 0x02,
-         //.clear_value_depth = ctx->clear.depth,
-         .clear_value_depth = 0x00FFFFFF,
-         .clear_value_stencil = ctx->clear.stencil,
-         .clear_value_color = ctx->clear.color,
-         .clear_value_color_1 = ctx->clear.color,
-         .clear_value_color_2 = ctx->clear.color,
-         .clear_value_color_3 = ctx->clear.color,
-         /* different with limare */
-         .width = 0,
-         .height = 0,
-         .fragment_stack_address = 0,
-         .fragment_stack_size = 0,
-         .unused_1 = 0,
-         .unused_2 = 0,
-         .one = 1,
-         .supersampled_height = ctx->framebuffer.height * 2 - 1,
-         .dubya = 0x77,
-         .onscreen = 1,
-         .blocking = (ctx->framebuffer.shift_max << 28) |
-                     (ctx->framebuffer.shift_h << 16) | ctx->framebuffer.shift_w,
-         /* different with limare */
-         .scale = 0xE0C,
-         .foureight = 0x8888,
-      },
+   else {
+      struct drm_lima_m450_pp_frame pp_frame = {0};
+      lima_pack_pp_frame_reg(ctx, &pp_frame.frame, pp_frame.wb);
 
-      .wb[0] = {
-         .type = 0x02, /* 1 for depth, stencil */
-         .address = res->bo->va,
-         .pixel_format = 0x03, /* BGRA8888 */
-         .downsample_factor = 0,
-         .pixel_layout = 0,
-         .pitch = res->stride / 8,
-         .mrt_bits = swap_channels ? 0x4 : 0x0,
-         .mrt_pitch = 0,
-         .zero = 0,
-         .unused0 = 0,
-         .unused1 = 0,
-         .unused2 = 0,
-      },
-      .wb[1] = {0},
-      .wb[2] = {0},
+      struct lima_context_framebuffer *fb = &ctx->framebuffer;
+      pp_frame.dlbu_regs[0] = ctx->plb[ctx->plb_index]->va;
+      pp_frame.dlbu_regs[1] = ((fb->tiled_h - 1) << 16) | (fb->tiled_w - 1);
+      pp_frame.dlbu_regs[2] = 0x20000000 | (fb->shift_h << 16) | fb->shift_w;
+      pp_frame.dlbu_regs[3] = ((fb->tiled_h - 1) << 24) | ((fb->tiled_w - 1) << 16);
 
-      .plbu_array_address = {0},
-      .fragment_stack_address = {0},
-      .num_pp = num_pp,
-   };
+      lima_dump_command_stream_print(
+         &pp_frame, sizeof(pp_frame), false, "add pp frame\n");
 
-   struct lima_ctx_plb_pp_stream *s = ctx->current_plb_pp_stream;
-   for (int i = 0; i < num_pp; i++)
-      pp_frame.plbu_array_address[i] = s->bo->va + s->offset[i];
-
-   lima_dump_command_stream_print(
-      &pp_frame, sizeof(pp_frame), false, "add pp frame\n");
-
-   if (!lima_submit_start(ctx->pp_submit, &pp_frame, sizeof(pp_frame)))
-      fprintf(stderr, "pp submit error\n");
+      if (!lima_submit_start(ctx->pp_submit, &pp_frame, sizeof(pp_frame)))
+         fprintf(stderr, "pp submit error\n");
+   }
 
    ctx->num_draws = 0;
    ctx->plb_index = (ctx->plb_index + 1) % lima_ctx_num_plb;
-   ctx->current_plb_pp_stream = NULL;
 }
 
 static void
