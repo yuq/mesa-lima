@@ -78,7 +78,7 @@ struct drm_lima_m400_gp_frame {
 	__u32 tile_heap_end;
 };
 
-struct drm_lima_m400_pp_frame_reg {
+struct drm_lima_pp_frame_reg {
 	__u32 plbu_array_address;
 	__u32 render_address;
 	__u32 unused_0;
@@ -105,7 +105,7 @@ struct drm_lima_m400_pp_frame_reg {
 	__u32 _pad;
 };
 
-struct drm_lima_m400_pp_wb_reg {
+struct drm_lima_pp_wb_reg {
 	__u32 type;
 	__u32 address;
 	__u32 pixel_format;
@@ -121,12 +121,19 @@ struct drm_lima_m400_pp_wb_reg {
 };
 
 struct drm_lima_m400_pp_frame {
-	struct drm_lima_m400_pp_frame_reg frame;
-	struct drm_lima_m400_pp_wb_reg wb[3];
+	struct drm_lima_pp_frame_reg frame;
+	struct drm_lima_pp_wb_reg wb[3];
 	__u32 plbu_array_address[4];
 	__u32 fragment_stack_address[4];
 	__u32 num_pp;
 	__u32 _pad;
+};
+
+struct drm_lima_m450_pp_frame {
+	struct drm_lima_pp_frame_reg frame;
+	struct drm_lima_pp_wb_reg wb[3];
+	__u32 dlbu_regs[4];
+	__u32 fragment_stack_address[8];
 };
 
 #define LIMA_PIPE_GP  0x00
