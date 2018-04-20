@@ -2090,6 +2090,18 @@ static LLVMValueRef adjust_sample_index_using_fmask(struct ac_llvm_context *ctx,
 	return sample_index;
 }
 
+static bool
+glsl_is_array_image(const struct glsl_type *type)
+{
+	const enum glsl_sampler_dim dim = glsl_get_sampler_dim(type);
+
+	if (glsl_sampler_type_is_array(type))
+		return true;
+
+	return dim == GLSL_SAMPLER_DIM_SUBPASS ||
+	       dim == GLSL_SAMPLER_DIM_SUBPASS_MS;
+}
+
 static void get_image_coords(struct ac_nir_context *ctx,
 			     const nir_intrinsic_instr *instr,
 			     struct ac_image_args *args)
@@ -2235,7 +2247,7 @@ static LLVMValueRef visit_image_load(struct ac_nir_context *ctx,
 		args.resource = get_sampler_desc(ctx, instr->variables[0],
 						 AC_DESC_IMAGE, NULL, true, false);
 		args.dim = get_ac_image_dim(&ctx->ac, glsl_get_sampler_dim(type),
-					    glsl_sampler_type_is_array(type));
+					    glsl_is_array_image(type));
 		args.dmask = 15;
 		args.attributes = AC_FUNC_ATTR_READONLY;
 		if (var->data.image._volatile || var->data.image.coherent)
@@ -2278,7 +2290,7 @@ static void visit_image_store(struct ac_nir_context *ctx,
 		args.resource = get_sampler_desc(ctx, instr->variables[0],
 						 AC_DESC_IMAGE, NULL, true, false);
 		args.dim = get_ac_image_dim(&ctx->ac, glsl_get_sampler_dim(type),
-					    glsl_sampler_type_is_array(type));
+					    glsl_is_array_image(type));
 		args.dmask = 15;
 		if (force_glc || var->data.image._volatile || var->data.image.coherent)
 			args.cache_policy |= ac_glc;
@@ -2369,7 +2381,7 @@ static LLVMValueRef visit_image_atomic(struct ac_nir_context *ctx,
 		args.resource = get_sampler_desc(ctx, instr->variables[0],
 						 AC_DESC_IMAGE, NULL, true, false);
 		args.dim = get_ac_image_dim(&ctx->ac, glsl_get_sampler_dim(type),
-					    glsl_sampler_type_is_array(type));
+					    glsl_is_array_image(type));
 
 		return ac_build_image_opcode(&ctx->ac, &args);
 	}
