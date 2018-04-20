@@ -121,7 +121,7 @@ static bool gpir_emit_alu(gpir_block *block, nir_instr *ni)
    int op = nir_to_gpir_opcodes[instr->op];
 
    if (op < 0) {
-      gpir_error("unsupport nir_op %d\n", instr->op);
+      gpir_error("unsupported nir_op %d\n", instr->op);
       return false;
    }
 
@@ -203,7 +203,7 @@ static bool gpir_emit_intrinsic(gpir_block *block, nir_instr *ni)
       return true;
    }
    default:
-      gpir_error("unsupport nir_intrinsic_instr %d\n", instr->intrinsic);
+      gpir_error("unsupported nir_intrinsic_instr %d\n", instr->intrinsic);
       return false;
    }
 }
