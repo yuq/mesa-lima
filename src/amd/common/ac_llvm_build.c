@@ -1489,12 +1489,15 @@ LLVMValueRef ac_build_image_opcode(struct ac_llvm_context *ctx,
 				   struct ac_image_args *a)
 {
 	LLVMValueRef args[16];
+	LLVMTypeRef retty = ctx->v4f32;
 	const char *name = NULL;
-	char intr_name[128], type[64];
+	const char *atomic_subop = "";
+	char intr_name[128], coords_type[64];
 
 	assert(!a->lod || a->lod == ctx->i32_0 || a->lod == ctx->f32_0 ||
 	       !a->level_zero);
-	assert((a->opcode != ac_image_get_resinfo && a->opcode != ac_image_load_mip) ||
+	assert((a->opcode != ac_image_get_resinfo && a->opcode != ac_image_load_mip &&
+		a->opcode != ac_image_store_mip) ||
 	       a->lod);
 	assert((a->bias ? 1 : 0) +
 	       (a->lod ? 1 : 0) +
@@ -1504,6 +1507,8 @@ LLVMValueRef ac_build_image_opcode(struct ac_llvm_context *ctx,
 	bool sample = a->opcode == ac_image_sample ||
 		      a->opcode == ac_image_gather4 ||
 		      a->opcode == ac_image_get_lod;
+	bool atomic = a->opcode == ac_image_atomic ||
+		      a->opcode == ac_image_atomic_cmpswap;
 	bool da = a->dim == ac_image_cube ||
 		  a->dim == ac_image_1darray ||
 		  a->dim == ac_image_2darray ||
@@ -1539,6 +1544,13 @@ LLVMValueRef ac_build_image_opcode(struct ac_llvm_context *ctx,
 	addr = ac_build_gather_values(ctx, args, num_addr);
 
 	unsigned num_args = 0;
+	if (atomic || a->opcode == ac_image_store || a->opcode == ac_image_store_mip) {
+		args[num_args++] = a->data[0];
+		if (a->opcode == ac_image_atomic_cmpswap)
+			args[num_args++] = a->data[1];
+	}
+
+	unsigned coords_arg = num_args;
 	if (sample)
 		args[num_args++] = ac_to_float(ctx, addr);
 	else
@@ -1547,13 +1559,19 @@ LLVMValueRef ac_build_image_opcode(struct ac_llvm_context *ctx,
 	args[num_args++] = a->resource;
 	if (sample)
 		args[num_args++] = a->sampler;
-	args[num_args++] = LLVMConstInt(ctx->i32, a->dmask, 0);
-	if (sample)
-		args[num_args++] = LLVMConstInt(ctx->i1, a->unorm, 0);
-	args[num_args++] = ctx->i1false; /* glc */
-	args[num_args++] = ctx->i1false; /* slc */
-	args[num_args++] = ctx->i1false; /* lwe */
-	args[num_args++] = LLVMConstInt(ctx->i1, da, 0);
+	if (!atomic) {
+		args[num_args++] = LLVMConstInt(ctx->i32, a->dmask, 0);
+		if (sample)
+			args[num_args++] = LLVMConstInt(ctx->i1, a->unorm, 0);
+		args[num_args++] = a->cache_policy & ac_glc ? ctx->i1true : ctx->i1false;
+		args[num_args++] = a->cache_policy & ac_slc ? ctx->i1true : ctx->i1false;
+		args[num_args++] = ctx->i1false; /* lwe */
+		args[num_args++] = LLVMConstInt(ctx->i1, da, 0);
+	} else {
+		args[num_args++] = ctx->i1false; /* r128 */
+		args[num_args++] = LLVMConstInt(ctx->i1, da, 0);
+		args[num_args++] = a->cache_policy & ac_slc ? ctx->i1true : ctx->i1false;
+	}
 
 	switch (a->opcode) {
 	case ac_image_sample:
@@ -1568,6 +1586,35 @@ LLVMValueRef ac_build_image_opcode(struct ac_llvm_context *ctx,
 	case ac_image_load_mip:
 		name = "llvm.amdgcn.image.load.mip";
 		break;
+	case ac_image_store:
+		name = "llvm.amdgcn.image.store";
+		retty = ctx->voidt;
+		break;
+	case ac_image_store_mip:
+		name = "llvm.amdgcn.image.store.mip";
+		retty = ctx->voidt;
+		break;
+	case ac_image_atomic:
+	case ac_image_atomic_cmpswap:
+		name = "llvm.amdgcn.image.atomic.";
+		retty = ctx->i32;
+		if (a->opcode == ac_image_atomic_cmpswap) {
+			atomic_subop = "cmpswap";
+		} else {
+			switch (a->atomic) {
+			case ac_atomic_swap: atomic_subop = "swap"; break;
+			case ac_atomic_add: atomic_subop = "add"; break;
+			case ac_atomic_sub: atomic_subop = "sub"; break;
+			case ac_atomic_smin: atomic_subop = "smin"; break;
+			case ac_atomic_umin: atomic_subop = "umin"; break;
+			case ac_atomic_smax: atomic_subop = "smax"; break;
+			case ac_atomic_umax: atomic_subop = "umax"; break;
+			case ac_atomic_and: atomic_subop = "and"; break;
+			case ac_atomic_or: atomic_subop = "or"; break;
+			case ac_atomic_xor: atomic_subop = "xor"; break;
+			}
+		}
+		break;
 	case ac_image_get_lod:
 		name = "llvm.amdgcn.image.getlod";
 		break;
@@ -1578,27 +1625,31 @@ LLVMValueRef ac_build_image_opcode(struct ac_llvm_context *ctx,
 		unreachable("invalid image opcode");
 	}
 
-	ac_build_type_name_for_intr(LLVMTypeOf(args[0]), type,
-				    sizeof(type));
+	ac_build_type_name_for_intr(LLVMTypeOf(args[coords_arg]), coords_type,
+				    sizeof(coords_type));
 
-	bool lod_suffix =
-		a->lod && (a->opcode == ac_image_sample || a->opcode == ac_image_gather4);
+	if (atomic) {
+		snprintf(intr_name, sizeof(intr_name), "llvm.amdgcn.image.atomic.%s.%s",
+			 atomic_subop, coords_type);
+	} else {
+		bool lod_suffix =
+			a->lod && (a->opcode == ac_image_sample || a->opcode == ac_image_gather4);
 
-	snprintf(intr_name, sizeof(intr_name), "%s%s%s%s.v4f32.%s.v8i32",
-		name,
-		a->compare ? ".c" : "",
-		a->bias ? ".b" :
-		lod_suffix ? ".l" :
-		a->derivs[0] ? ".d" :
-		a->level_zero ? ".lz" : "",
-		a->offset ? ".o" : "",
-		type);
+		snprintf(intr_name, sizeof(intr_name), "%s%s%s%s.v4f32.%s.v8i32",
+			name,
+			a->compare ? ".c" : "",
+			a->bias ? ".b" :
+			lod_suffix ? ".l" :
+			a->derivs[0] ? ".d" :
+			a->level_zero ? ".lz" : "",
+			a->offset ? ".o" : "",
+			coords_type);
+	}
 
 	LLVMValueRef result =
-		ac_build_intrinsic(ctx, intr_name,
-				   ctx->v4f32, args, num_args,
-				   AC_FUNC_ATTR_READNONE);
-	if (!sample) {
+		ac_build_intrinsic(ctx, intr_name, retty, args, num_args,
+				   a->attributes);
+	if (!sample && retty == ctx->v4f32) {
 		result = LLVMBuildBitCast(ctx->builder, result,
 					  ctx->v4i32, "");
 	}
