@@ -1948,28 +1948,6 @@ LLVMValueRef ac_build_fsign(struct ac_llvm_context *ctx, LLVMValueRef src0,
 	return val;
 }
 
-void ac_get_image_intr_name(const char *base_name,
-			    LLVMTypeRef data_type,
-			    LLVMTypeRef coords_type,
-			    LLVMTypeRef rsrc_type,
-			    char *out_name, unsigned out_len)
-{
-        char coords_type_name[8];
-
-        ac_build_type_name_for_intr(coords_type, coords_type_name,
-                            sizeof(coords_type_name));
-
-	char data_type_name[8];
-	char rsrc_type_name[8];
-
-	ac_build_type_name_for_intr(data_type, data_type_name,
-				    sizeof(data_type_name));
-	ac_build_type_name_for_intr(rsrc_type, rsrc_type_name,
-				    sizeof(rsrc_type_name));
-	snprintf(out_name, out_len, "%s.%s.%s.%s", base_name,
-		 data_type_name, coords_type_name, rsrc_type_name);
-}
-
 #define AC_EXP_TARGET (HAVE_LLVM >= 0x0500 ? 0 : 3)
 #define AC_EXP_ENABLED_CHANNELS (HAVE_LLVM >= 0x0500 ? 1 : 0)
 #define AC_EXP_OUT0 (HAVE_LLVM >= 0x0500 ? 2 : 5)
