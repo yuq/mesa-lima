@@ -137,7 +137,7 @@ static ppir_node *ppir_emit_alu(ppir_block *block, nir_instr *ni)
    int op = nir_to_ppir_opcodes[instr->op];
 
    if (op < 0) {
-      ppir_error("unsupport nir_op %d\n", instr->op);
+      ppir_error("unsupported nir_op %d\n", instr->op);
       return NULL;
    }
 
@@ -241,7 +241,7 @@ static ppir_node *ppir_emit_intrinsic(ppir_block *block, nir_instr *ni)
       return &snode->node;
 
    default:
-      ppir_error("unsupport nir_intrinsic_instr %d\n", instr->intrinsic);
+      ppir_error("unsupported nir_intrinsic_instr %d\n", instr->intrinsic);
       return NULL;
    }
 }
