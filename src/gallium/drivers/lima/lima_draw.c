@@ -28,6 +28,7 @@
 #include "util/u_half.h"
 #include "util/u_helpers.h"
 #include "util/u_inlines.h"
+#include "util/u_pack_color.h"
 #include "util/hash_table.h"
 
 #include "lima_context.h"
@@ -60,7 +61,7 @@ lima_clear(struct pipe_context *pctx, unsigned buffers,
          float_to_ubyte(color->f[0]);
 
    if (buffers & PIPE_CLEAR_DEPTH)
-      clear->depth = fui(depth);
+      clear->depth = util_pack_z(PIPE_FORMAT_Z24X8_UNORM, depth);
 
    if (buffers & PIPE_CLEAR_STENCIL)
       clear->stencil = stencil;
@@ -556,6 +557,32 @@ lima_stencil_op(enum pipe_stencil_op pipe)
    return -1;
 }
 
+static int
+lima_calculate_depth_test(struct pipe_depth_state *depth, struct pipe_rasterizer_state *rst)
+{
+   enum pipe_compare_func func = (depth->enabled ? depth->func : PIPE_FUNC_ALWAYS);
+
+   int offset_scale = 0;
+
+   //TODO: implement polygon offset
+#if 0
+   if (rst->offset_scale < -32)
+      offset_scale = -32;
+   else if (rst->offset_scale > 31)
+      offset_scale = 31;
+   else
+      offset_scale = rst->offset_scale * 4;
+
+   if (offset_scale < 0)
+      offset_scale = 0x100 + offset_scale;
+#endif
+
+   return (depth->enabled && depth->writemask) |
+      ((int)func << 1) |
+      (offset_scale << 16) |
+      0x30; /* find out what is this */
+}
+
 static void
 lima_pack_render_state(struct lima_context *ctx)
 {
@@ -593,17 +620,9 @@ lima_pack_render_state(struct lima_context *ctx)
 
    render->alpha_blend |= (rt->colormask & PIPE_MASK_RGBA) << 28;
 
-#if 0
+   struct pipe_rasterizer_state *rst = &ctx->rasterizer->base;
    struct pipe_depth_state *depth = &ctx->zsa->base.depth;
-   //struct pipe_rasterizer_state *rst = &ctx->rasterizer->base;
-   render->depth_test = depth->enabled |
-      (depth->func << 1);
-   /* need more investigation */
-   //(some_transform(rst->offset_scale) << 16) |
-   //(some_transform(rst->offset_units) << 24) |
-#else
-   render->depth_test = 0x0000003e;
-#endif
+   render->depth_test = lima_calculate_depth_test(depth, rst);
 
    /* overlap with plbu? any place can remove one? */
    render->depth_range = float_to_ushort(ctx->viewport.near) |
@@ -976,8 +995,7 @@ lima_pack_pp_frame_reg(struct lima_context *ctx,
    struct lima_screen *screen = lima_screen(ctx->base.screen);
    frame->render_address = screen->pp_buffer->va + pp_frame_rsw_offset;
    frame->flags = 0x02;
-   //frame->clear_value_depth = ctx->clear.depth;
-   frame->clear_value_depth = 0x00FFFFFF;
+   frame->clear_value_depth = ctx->clear.depth;
    frame->clear_value_stencil = ctx->clear.stencil;
    frame->clear_value_color = ctx->clear.color;
    frame->clear_value_color_1 = ctx->clear.color;
