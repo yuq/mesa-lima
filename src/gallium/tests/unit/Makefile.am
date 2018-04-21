@@ -32,3 +32,5 @@ u_format_test_SOURCES = u_format_test.c
 u_format_compatible_test_SOURCES = u_format_compatible_test.c
 
 translate_test_SOURCES = translate_test.c
+
+EXTRA_DIST = meson.build

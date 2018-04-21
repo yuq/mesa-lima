@@ -43,3 +43,5 @@ st_renumerate_test_LDADD = \
 	$(top_builddir)/src/gtest/libgtest.la \
 	$(GALLIUM_COMMON_LIB_DEPS) \
 	$(LLVM_LIBS)
+
+EXTRA_DIST = meson.build
