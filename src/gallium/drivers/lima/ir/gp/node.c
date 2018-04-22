@@ -110,6 +110,18 @@ const gpir_op_info gpir_op_infos[] = {
          GPIR_INSTR_SLOT_END
       },
    },
+   [gpir_op_eq] = {
+      .name = "eq",
+      .slots = (int []) {
+         GPIR_INSTR_SLOT_ADD0, GPIR_INSTR_SLOT_ADD1, GPIR_INSTR_SLOT_END
+      },
+   },
+   [gpir_op_ne] = {
+      .name = "ne",
+      .slots = (int []) {
+         GPIR_INSTR_SLOT_ADD0, GPIR_INSTR_SLOT_ADD1, GPIR_INSTR_SLOT_END
+      },
+   },
    [gpir_op_clamp_const] = {
       .name = "clamp_const",
    },

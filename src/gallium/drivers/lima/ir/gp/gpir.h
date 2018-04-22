@@ -94,6 +94,8 @@ typedef enum {
    gpir_op_cos,
    gpir_op_tan,
    gpir_op_branch_uncond,
+   gpir_op_eq,
+   gpir_op_ne,
 
    /* auxiliary ops */
    gpir_op_dummy_f,
