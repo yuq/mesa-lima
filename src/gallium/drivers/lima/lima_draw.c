@@ -161,7 +161,8 @@ lima_update_plb(struct lima_context *ctx, struct lima_ctx_plb_pp_stream *s)
       hilbert_coords(max, i, &x, &y);
       if (x < fb->tiled_w && y < fb->tiled_h) {
          int pp = index % num_pp;
-         int offset = ((y >> fb->shift_h) * fb->block_w + (x >> fb->shift_w)) * 512;
+         int offset = ((y >> fb->shift_h) * fb->block_w +
+                       (x >> fb->shift_w)) * LIMA_CTX_PLB_BLK_SIZE;
          int plb_va = ctx->plb[s->key.plb_index]->va + offset;
 
          stream[pp][si[pp]++] = 0;
