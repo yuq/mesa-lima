@@ -1108,7 +1108,8 @@ lima_flush(struct lima_context *ctx)
       struct lima_context_framebuffer *fb = &ctx->framebuffer;
       pp_frame.dlbu_regs[0] = ctx->plb[ctx->plb_index]->va;
       pp_frame.dlbu_regs[1] = ((fb->tiled_h - 1) << 16) | (fb->tiled_w - 1);
-      pp_frame.dlbu_regs[2] = 0x20000000 | (fb->shift_h << 16) | fb->shift_w;
+      unsigned s = util_logbase2(LIMA_CTX_PLB_BLK_SIZE) - 7;
+      pp_frame.dlbu_regs[2] = (s << 28) | (fb->shift_h << 16) | fb->shift_w;
       pp_frame.dlbu_regs[3] = ((fb->tiled_h - 1) << 24) | ((fb->tiled_w - 1) << 16);
 
       lima_dump_command_stream_print(
