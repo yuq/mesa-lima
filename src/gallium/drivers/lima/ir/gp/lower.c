@@ -366,10 +366,70 @@ static bool gpir_lower_node_may_consume_two_slots(gpir_compiler *comp)
    return true;
 }
 
+/*
+ * There are no 'equal' or 'not-equal' opcodes.
+ * eq (a == b) is lowered to and(a >= b, b >= a)
+ * ne (a != b) is lowered to or(a < b, b < a)
+ */
+static bool gpir_lower_eq_ne(gpir_block *block, gpir_node *node)
+{
+   gpir_op cmp_node_op;
+   gpir_op node_new_op;
+   switch (node->op) {
+      case gpir_op_eq:
+         cmp_node_op = gpir_op_ge;
+         node_new_op = gpir_op_min; /* and */
+         break;
+      case gpir_op_ne:
+         cmp_node_op = gpir_op_lt;
+         node_new_op = gpir_op_max; /* or */
+         break;
+      default:
+         assert(0);
+   }
+
+   gpir_alu_node *e = gpir_node_to_alu(node);
+
+   gpir_alu_node *cmp1 = gpir_node_create(block, cmp_node_op);
+   list_addtail(&cmp1->node.list, &node->list);
+   gpir_alu_node *cmp2 = gpir_node_create(block, cmp_node_op);
+   list_addtail(&cmp2->node.list, &node->list);
+
+   cmp1->children[0] = e->children[0];
+   cmp1->children[1] = e->children[1];
+   cmp1->num_child = 2;
+
+   cmp2->children[0] = e->children[1];
+   cmp2->children[1] = e->children[0];
+   cmp2->num_child = 2;
+
+   gpir_node_add_dep(&cmp1->node, e->children[0], GPIR_DEP_INPUT);
+   gpir_node_add_dep(&cmp1->node, e->children[1], GPIR_DEP_INPUT);
+
+   gpir_node_add_dep(&cmp2->node, e->children[0], GPIR_DEP_INPUT);
+   gpir_node_add_dep(&cmp2->node, e->children[1], GPIR_DEP_INPUT);
+
+   gpir_node_foreach_pred_safe(node, dep) {
+      gpir_node_remove_dep(node, dep->pred);
+   }
+
+   gpir_node_add_dep(node, &cmp1->node, GPIR_DEP_INPUT);
+   gpir_node_add_dep(node, &cmp2->node, GPIR_DEP_INPUT);
+
+   node->op = node_new_op;
+   e->children[0] = &cmp1->node;
+   e->children[1] = &cmp2->node;
+   e->num_child = 2;
+
+   return true;
+}
+
 static bool (*gpir_lower_funcs[gpir_op_num])(gpir_block *, gpir_node *) = {
    [gpir_op_neg] = gpir_lower_neg,
    [gpir_op_rcp] = gpir_lower_complex,
    [gpir_op_rsqrt] = gpir_lower_complex,
+   [gpir_op_eq] = gpir_lower_eq_ne,
+   [gpir_op_ne] = gpir_lower_eq_ne,
 };
 
 bool gpir_pre_rsched_lower_prog(gpir_compiler *comp)
