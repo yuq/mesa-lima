@@ -1120,8 +1120,7 @@ intelDestroyContext(__DRIcontext * driContextPriv)
       brw_destroy_shader_time(brw);
    }
 
-   if (devinfo->gen >= 6)
-      blorp_finish(&brw->blorp);
+   blorp_finish(&brw->blorp);
 
    brw_destroy_state(brw);
    brw_draw_destroy(brw);
