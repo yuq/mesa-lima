@@ -137,6 +137,9 @@ static void ppir_codegen_encode_vec_mul(ppir_node *node, void *code)
    case ppir_op_max:
       f->op = ppir_codegen_vec4_mul_op_max;
       break;
+   case ppir_op_min:
+      f->op = ppir_codegen_vec4_mul_op_min;
+      break;
    default:
       break;
    }
@@ -182,6 +185,9 @@ static void ppir_codegen_encode_scl_mul(ppir_node *node, void *code)
       break;
    case ppir_op_max:
       f->op = ppir_codegen_float_mul_op_max;
+      break;
+   case ppir_op_min:
+      f->op = ppir_codegen_float_mul_op_min;
       break;
    default:
       break;
@@ -276,6 +282,9 @@ static void ppir_codegen_encode_scl_add(ppir_node *node, void *code)
       break;
    case ppir_op_max:
       f->op = ppir_codegen_float_acc_op_max;
+      break;
+   case ppir_op_min:
+      f->op = ppir_codegen_float_acc_op_min;
       break;
    default:
       break;

@@ -129,6 +129,7 @@ static int nir_to_ppir_opcodes[nir_num_opcodes] = {
    [nir_op_flog2] = ppir_op_log2,
    [nir_op_fexp2] = ppir_op_exp2,
    [nir_op_fmax] = ppir_op_max,
+   [nir_op_fmin] = ppir_op_min,
    [nir_op_frcp] = ppir_op_rcp,
 };
 
