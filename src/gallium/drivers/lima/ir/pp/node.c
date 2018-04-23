@@ -106,6 +106,14 @@ const ppir_op_info ppir_op_infos[] = {
          PPIR_INSTR_SLOT_END
       },
    },
+   [ppir_op_min] = {
+      .name = "min",
+      .slots = (int []) {
+         PPIR_INSTR_SLOT_ALU_SCL_ADD, PPIR_INSTR_SLOT_ALU_SCL_MUL,
+         PPIR_INSTR_SLOT_ALU_VEC_ADD, PPIR_INSTR_SLOT_ALU_VEC_MUL,
+         PPIR_INSTR_SLOT_END
+      },
+   },
    [ppir_op_rcp] = {
       .name = "rcp",
       .slots = (int []) {
