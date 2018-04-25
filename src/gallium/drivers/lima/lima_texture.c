@@ -91,7 +91,7 @@ lima_update_tex_desc(struct lima_context *ctx, struct lima_sampler_state *sample
 
    /* TODO: - do we need to align width/height to 16?
             - does hardware support stride different from width? */
-   width = prsc->width0;
+   width = align(prsc->width0, 16);
    height = prsc->height0;
 
    /* "Swizzled" textures aren't supported yet */
