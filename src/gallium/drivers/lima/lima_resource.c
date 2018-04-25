@@ -310,6 +310,10 @@ lima_surface_destroy(struct pipe_context *pctx, struct pipe_surface *psurf)
 
          struct hash_entry *entry =
             _mesa_hash_table_search(ctx->plb_pp_stream, &key);
+
+        if (!entry)
+            continue;
+
          struct lima_ctx_plb_pp_stream *s = entry->data;
          if (--s->refcnt == 0) {
             if (s->bo)
