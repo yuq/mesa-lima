@@ -424,12 +424,32 @@ static bool gpir_lower_eq_ne(gpir_block *block, gpir_node *node)
    return true;
 }
 
+/*
+ * There is no 'abs' opcode.
+ * abs(a) is lowered to max(a, -a)
+ */
+static bool gpir_lower_abs(gpir_block *block, gpir_node *node)
+{
+   gpir_alu_node *alu = gpir_node_to_alu(node);
+
+   assert(node->op == gpir_op_abs);
+
+   node->op = gpir_op_max;
+
+   alu->children[1] = alu->children[0];
+   alu->children_negate[1] = true;
+   alu->num_child = 2;
+
+   return true;
+}
+
 static bool (*gpir_lower_funcs[gpir_op_num])(gpir_block *, gpir_node *) = {
    [gpir_op_neg] = gpir_lower_neg,
    [gpir_op_rcp] = gpir_lower_complex,
    [gpir_op_rsqrt] = gpir_lower_complex,
    [gpir_op_eq] = gpir_lower_eq_ne,
    [gpir_op_ne] = gpir_lower_eq_ne,
+   [gpir_op_abs] = gpir_lower_abs,
 };
 
 bool gpir_pre_rsched_lower_prog(gpir_compiler *comp)
