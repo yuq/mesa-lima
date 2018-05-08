@@ -43,6 +43,56 @@
 
 #include <lima_drm.h>
 
+struct lima_gp_frame_reg {
+   uint32_t vs_cmd_start;
+   uint32_t vs_cmd_end;
+   uint32_t plbu_cmd_start;
+   uint32_t plbu_cmd_end;
+   uint32_t tile_heap_start;
+   uint32_t tile_heap_end;
+};
+
+struct lima_pp_frame_reg {
+   uint32_t plbu_array_address;
+   uint32_t render_address;
+   uint32_t unused_0;
+   uint32_t flags;
+   uint32_t clear_value_depth;
+   uint32_t clear_value_stencil;
+   uint32_t clear_value_color;
+   uint32_t clear_value_color_1;
+   uint32_t clear_value_color_2;
+   uint32_t clear_value_color_3;
+   uint32_t width;
+   uint32_t height;
+   uint32_t fragment_stack_address;
+   uint32_t fragment_stack_size;
+   uint32_t unused_1;
+   uint32_t unused_2;
+   uint32_t one;
+   uint32_t supersampled_height;
+   uint32_t dubya;
+   uint32_t onscreen;
+   uint32_t blocking;
+   uint32_t scale;
+   uint32_t foureight;
+};
+
+struct lima_pp_wb_reg {
+   uint32_t type;
+   uint32_t address;
+   uint32_t pixel_format;
+   uint32_t downsample_factor;
+   uint32_t pixel_layout;
+   uint32_t pitch;
+   uint32_t mrt_bits;
+   uint32_t mrt_pitch;
+   uint32_t zero;
+   uint32_t unused0;
+   uint32_t unused1;
+   uint32_t unused2;
+};
+
 static void
 lima_clear(struct pipe_context *pctx, unsigned buffers,
            const union pipe_color_union *color, double depth, unsigned stencil)
@@ -977,9 +1027,8 @@ lima_finish_plbu_cmd(struct lima_context *ctx)
 }
 
 static void
-lima_pack_pp_frame_reg(struct lima_context *ctx,
-                       struct drm_lima_pp_frame_reg *frame,
-                       struct drm_lima_pp_wb_reg *wb)
+lima_pack_pp_frame_reg(struct lima_context *ctx, uint32_t *frame_reg,
+                       uint32_t *wb_reg)
 {
    struct lima_resource *res = lima_resource(ctx->framebuffer.cbuf->texture);
    lima_bo_update(res->bo, false, true);
@@ -994,6 +1043,7 @@ lima_pack_pp_frame_reg(struct lima_context *ctx,
       break;
    }
 
+   struct lima_pp_frame_reg *frame = (void *)frame_reg;
    struct lima_screen *screen = lima_screen(ctx->base.screen);
    frame->render_address = screen->pp_buffer->va + pp_frame_rsw_offset;
    frame->flags = 0x02;
@@ -1012,6 +1062,7 @@ lima_pack_pp_frame_reg(struct lima_context *ctx,
    frame->scale = 0xE0C;
    frame->foureight = 0x8888;
 
+   struct lima_pp_wb_reg *wb = (void *)wb_reg;
    wb[0].type = 0x02; /* 1 for depth, stencil */
    wb[0].address = res->bo->va;
    wb[0].pixel_format = 0x03; /* BGRA8888 */
@@ -1047,14 +1098,14 @@ lima_flush(struct lima_context *ctx)
    struct lima_screen *screen = lima_screen(ctx->base.screen);
    uint32_t vs_cmd_va = lima_ctx_buff_va(ctx, lima_ctx_buff_gp_vs_cmd);
    uint32_t plbu_cmd_va = lima_ctx_buff_va(ctx, lima_ctx_buff_gp_plbu_cmd);
-   struct drm_lima_m400_gp_frame gp_frame = {
-      .vs_cmd_start = vs_cmd_va,
-      .vs_cmd_end = vs_cmd_va + vs_cmd_size,
-      .plbu_cmd_start = plbu_cmd_va,
-      .plbu_cmd_end = plbu_cmd_va + plbu_cmd_size,
-      .tile_heap_start = screen->gp_buffer->va + gp_tile_heap_offset,
-      .tile_heap_end = screen->gp_buffer->va + gp_buffer_size,
-   };
+   struct drm_lima_gp_frame gp_frame;
+   struct lima_gp_frame_reg *gp_frame_reg = (void *)gp_frame.frame;
+   gp_frame_reg->vs_cmd_start = vs_cmd_va;
+   gp_frame_reg->vs_cmd_end = vs_cmd_va + vs_cmd_size;
+   gp_frame_reg->plbu_cmd_start = plbu_cmd_va;
+   gp_frame_reg->plbu_cmd_end = plbu_cmd_va + plbu_cmd_size;
+   gp_frame_reg->tile_heap_start = screen->gp_buffer->va + gp_tile_heap_offset;
+   gp_frame_reg->tile_heap_end = screen->gp_buffer->va + gp_buffer_size;
 
    lima_dump_command_stream_print(
       vs_cmd, vs_cmd_size, false, "flush vs cmd at va %x\n", vs_cmd_va);
@@ -1087,15 +1138,15 @@ lima_flush(struct lima_context *ctx)
 
    if (screen->gpu_type == LIMA_INFO_GPU_MALI400) {
       struct drm_lima_m400_pp_frame pp_frame = {0};
-      lima_pack_pp_frame_reg(ctx, &pp_frame.frame, pp_frame.wb);
+      lima_pack_pp_frame_reg(ctx, pp_frame.frame, pp_frame.wb);
       pp_frame.num_pp = screen->num_pp;
-
-      lima_dump_command_stream_print(
-         &pp_frame, sizeof(pp_frame), false, "add pp frame\n");
 
       struct lima_ctx_plb_pp_stream *s = ctx->current_plb_pp_stream;
       for (int i = 0; i < screen->num_pp; i++)
          pp_frame.plbu_array_address[i] = s->bo->va + s->offset[i];
+
+      lima_dump_command_stream_print(
+         &pp_frame, sizeof(pp_frame), false, "add pp frame\n");
 
       if (!lima_submit_start(ctx->pp_submit, &pp_frame, sizeof(pp_frame)))
          fprintf(stderr, "pp submit error\n");
@@ -1104,7 +1155,7 @@ lima_flush(struct lima_context *ctx)
    }
    else {
       struct drm_lima_m450_pp_frame pp_frame = {0};
-      lima_pack_pp_frame_reg(ctx, &pp_frame.frame, pp_frame.wb);
+      lima_pack_pp_frame_reg(ctx, pp_frame.frame, pp_frame.wb);
 
       struct lima_context_framebuffer *fb = &ctx->framebuffer;
       pp_frame.dlbu_regs[0] = ctx->plb[ctx->plb_index]->va;
