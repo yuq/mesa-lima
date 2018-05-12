@@ -209,3 +209,30 @@ bool lima_submit_has_bo(struct lima_submit *submit, struct lima_bo *bo, bool all
 
    return false;
 }
+
+bool lima_submit_get_fence(struct lima_submit *submit, uint32_t *fence)
+{
+   if (list_empty(&submit->busy_job_list))
+      return false;
+
+   struct lima_submit_job *job =
+      list_first_entry(&submit->busy_job_list, struct lima_submit_job, list);
+   *fence = job->fence;
+   return true;
+}
+
+bool lima_submit_wait_fence(struct lima_submit *submit, uint32_t fence,
+                            uint64_t timeout_ns)
+{
+   if (!lima_get_absolute_timeout(&timeout_ns))
+      return false;
+
+   struct drm_lima_wait_fence req = {
+      .pipe = submit->pipe,
+      .seq = fence,
+      .timeout_ns = timeout_ns,
+      .ctx = submit->ctx,
+   };
+
+   return drmIoctl(submit->screen->fd, DRM_IOCTL_LIMA_WAIT_FENCE, &req) == 0;
+}
