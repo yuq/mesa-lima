@@ -179,7 +179,7 @@ bool lima_submit_wait(struct lima_submit *submit, uint64_t timeout_ns, bool rela
       list_first_entry(&submit->busy_job_list, struct lima_submit_job, list);
    struct drm_lima_wait_fence req = {
       .pipe = submit->pipe,
-      .fence = job->fence,
+      .seq = job->fence,
       .timeout_ns = timeout_ns,
       .ctx = submit->ctx,
    };

@@ -69,6 +69,27 @@ struct drm_lima_gem_submit_bo {
 	__u32 flags;   /* in */
 };
 
+#define LIMA_SUBMIT_DEP_FENCE   0x00
+#define LIMA_SUBMIT_DEP_SYNC_FD 0x01
+
+struct drm_lima_gem_submit_dep_fence {
+	__u32 type;
+	__u32 ctx;
+	__u32 pipe;
+	__u32 seq;
+};
+
+struct drm_lima_gem_submit_dep_sync_fd {
+	__u32 type;
+	__u32 fd;
+};
+
+union drm_lima_gem_submit_dep {
+	__u32 type;
+	struct drm_lima_gem_submit_dep_fence fence;
+	struct drm_lima_gem_submit_dep_sync_fd sync_fd;
+};
+
 #define LIMA_GP_FRAME_REG_NUM 6
 
 struct drm_lima_gp_frame {
@@ -97,6 +118,9 @@ struct drm_lima_m450_pp_frame {
 #define LIMA_PIPE_GP  0x00
 #define LIMA_PIPE_PP  0x01
 
+#define LIMA_SUBMIT_FLAG_EXPLICIT_FENCE (1 << 0)
+#define LIMA_SUBMIT_FLAG_SYNC_FD_OUT    (1 << 1)
+
 struct drm_lima_gem_submit_in {
 	__u32 ctx;
 	__u32 pipe;
@@ -104,11 +128,16 @@ struct drm_lima_gem_submit_in {
 	__u32 frame_size;
 	__u64 bos;
 	__u64 frame;
+	__u64 deps;
+	__u32 nr_deps;
+	__u32 flags;
 };
 
 struct drm_lima_gem_submit_out {
 	__u32 fence;
 	__u32 done;
+	__u32 sync_fd;
+	__u32 _pad;
 };
 
 union drm_lima_gem_submit {
@@ -117,10 +146,10 @@ union drm_lima_gem_submit {
 };
 
 struct drm_lima_wait_fence {
-	__u32 pipe;        /* in */
-	__u32 fence;       /* in */
-	__u64 timeout_ns;  /* in */
 	__u32 ctx;         /* in */
+	__u32 pipe;        /* in */
+	__u64 timeout_ns;  /* in */
+	__u32 seq;         /* in */
 	__u32 _pad;
 };
 
