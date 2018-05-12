@@ -25,6 +25,8 @@
 #include <stdarg.h>
 #include <time.h>
 
+#include <pipe/p_defines.h>
+
 #include "lima_util.h"
 
 FILE *lima_dump_command_stream = NULL;
@@ -33,6 +35,9 @@ bool lima_get_absolute_timeout(uint64_t *timeout)
 {
    struct timespec current;
    uint64_t current_ns;
+
+   if (*timeout == PIPE_TIMEOUT_INFINITE)
+      return true;
 
    if (clock_gettime(CLOCK_MONOTONIC, &current))
       return false;
