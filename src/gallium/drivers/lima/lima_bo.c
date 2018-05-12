@@ -37,7 +37,6 @@
 #include "lima_screen.h"
 #include "lima_bo.h"
 #include "lima_vamgr.h"
-#include "lima_util.h"
 
 #define PTR_TO_UINT(x) ((unsigned)((intptr_t)(x)))
 
@@ -369,11 +368,8 @@ struct lima_bo *lima_bo_import(struct lima_screen *screen,
    return bo;
 }
 
-bool lima_bo_wait(struct lima_bo *bo, uint32_t op, uint64_t timeout_ns, bool relative)
+bool lima_bo_wait(struct lima_bo *bo, uint32_t op, uint64_t timeout_ns)
 {
-   if (!lima_get_absolute_timeout(&timeout_ns, relative))
-      return false;
-
    struct drm_lima_gem_wait req = {
       .handle = bo->handle,
       .op = op,
