@@ -167,13 +167,10 @@ bool lima_submit_start(struct lima_submit *submit, void *frame, uint32_t size)
    return ret;
 }
 
-bool lima_submit_wait(struct lima_submit *submit, uint64_t timeout_ns, bool relative)
+bool lima_submit_wait(struct lima_submit *submit, uint64_t timeout_ns)
 {
    if (list_empty(&submit->busy_job_list))
       return true;
-
-   if (!lima_get_absolute_timeout(&timeout_ns, relative))
-      return false;
 
    struct lima_submit_job *job =
       list_first_entry(&submit->busy_job_list, struct lima_submit_job, list);

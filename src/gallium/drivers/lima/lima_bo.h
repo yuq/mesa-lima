@@ -67,7 +67,6 @@ bool lima_bo_export(struct lima_bo *bo, struct winsys_handle *handle);
 struct lima_bo *lima_bo_import(struct lima_screen *screen,
                                struct winsys_handle *handle);
 
-bool lima_bo_wait(struct lima_bo *bo, uint32_t op,
-                  uint64_t timeout_ns, bool relative);
+bool lima_bo_wait(struct lima_bo *bo, uint32_t op, uint64_t timeout_ns);
 
 #endif

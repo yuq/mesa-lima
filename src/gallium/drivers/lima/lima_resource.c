@@ -349,7 +349,7 @@ lima_transfer_map(struct pipe_context *pctx,
 
          unsigned op = usage & PIPE_TRANSFER_WRITE ?
             LIMA_GEM_WAIT_WRITE : LIMA_GEM_WAIT_READ;
-         lima_bo_wait(bo, op, PIPE_TIMEOUT_INFINITE, false);
+         lima_bo_wait(bo, op, PIPE_TIMEOUT_INFINITE);
       }
    }
 

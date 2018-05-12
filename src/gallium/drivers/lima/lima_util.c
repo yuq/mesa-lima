@@ -29,19 +29,18 @@
 
 FILE *lima_dump_command_stream = NULL;
 
-bool lima_get_absolute_timeout(uint64_t *timeout, bool relative)
+bool lima_get_absolute_timeout(uint64_t *timeout)
 {
-   if (relative) {
-      struct timespec current;
-      uint64_t current_ns;
+   struct timespec current;
+   uint64_t current_ns;
 
-      if (clock_gettime(CLOCK_MONOTONIC, &current))
-         return false;
+   if (clock_gettime(CLOCK_MONOTONIC, &current))
+      return false;
 
-      current_ns = ((uint64_t)current.tv_sec) * 1000000000ull;
-      current_ns += current.tv_nsec;
-      *timeout += current_ns;
-   }
+   current_ns = ((uint64_t)current.tv_sec) * 1000000000ull;
+   current_ns += current.tv_nsec;
+   *timeout += current_ns;
+
    return true;
 }
 
