@@ -42,13 +42,14 @@ struct lima_submit_job {
    uint32_t fence;
 
    struct util_dynarray bos;
-   struct util_dynarray gem_bos;
 };
 
 struct lima_submit {
    struct lima_screen *screen;
    uint32_t pipe;
    uint32_t ctx;
+
+   struct util_dynarray gem_bos;
 
    struct list_head busy_job_list;
    struct list_head free_job_list;
@@ -69,6 +70,9 @@ struct lima_submit *lima_submit_create(struct lima_context *ctx, uint32_t pipe)
    s->screen = lima_screen(ctx->base.screen);
    s->pipe = pipe;
    s->ctx = ctx->id;
+
+   util_dynarray_init(&s->gem_bos, s);
+
    list_inithead(&s->busy_job_list);
    list_inithead(&s->free_job_list);
    return s;
@@ -83,7 +87,6 @@ static struct lima_submit_job *lima_submit_job_alloc(struct lima_submit *submit)
       if (!job)
          return NULL;
       util_dynarray_init(&job->bos, job);
-      util_dynarray_init(&job->gem_bos, job);
    }
    else {
       job = list_first_entry(&submit->free_job_list, struct lima_submit_job, list);
@@ -100,46 +103,44 @@ static void lima_submit_job_free(struct lima_submit *submit,
       lima_bo_free(*bo);
    }
    util_dynarray_clear(&job->bos);
-   util_dynarray_clear(&job->gem_bos);
    list_add(&job->list, &submit->free_job_list);
 }
 
 bool lima_submit_add_bo(struct lima_submit *submit, struct lima_bo *bo, uint32_t flags)
 {
-   if (!submit->current_job)
-      submit->current_job = lima_submit_job_alloc(submit);
-
-   struct lima_submit_job *job = submit->current_job;
-
-   util_dynarray_foreach(&job->gem_bos, struct drm_lima_gem_submit_bo, gem_bo) {
+   util_dynarray_foreach(&submit->gem_bos, struct drm_lima_gem_submit_bo, gem_bo) {
       if (bo->handle == gem_bo->handle) {
          gem_bo->flags |= flags;
          return true;
       }
    }
 
-   /* prevent bo from being freed when submit start */
-   lima_bo_reference(bo);
+   struct drm_lima_gem_submit_bo *submit_bo =
+      util_dynarray_grow(&submit->gem_bos, sizeof(*submit_bo));
+   submit_bo->handle = bo->handle;
+   submit_bo->flags = flags;
 
+   if (!submit->current_job)
+      submit->current_job = lima_submit_job_alloc(submit);
+
+   struct lima_submit_job *job = submit->current_job;
    struct lima_bo **jbo = util_dynarray_grow(&job->bos, sizeof(*jbo));
    *jbo = bo;
 
-   struct drm_lima_gem_submit_bo *submit_bo =
-      util_dynarray_grow(&job->gem_bos, sizeof(*submit_bo));
-   submit_bo->handle = bo->handle;
-   submit_bo->flags = flags;
+   /* prevent bo from being freed when submit start */
+   lima_bo_reference(bo);
+
    return true;
 }
 
 bool lima_submit_start(struct lima_submit *submit, void *frame, uint32_t size)
 {
-   struct lima_submit_job *job = submit->current_job;
    union drm_lima_gem_submit req = {
       .in = {
          .ctx = submit->ctx,
          .pipe = submit->pipe,
-         .nr_bos = job->gem_bos.size / sizeof(struct drm_lima_gem_submit_bo),
-         .bos = VOID2U64(util_dynarray_begin(&job->gem_bos)),
+         .nr_bos = submit->gem_bos.size / sizeof(struct drm_lima_gem_submit_bo),
+         .bos = VOID2U64(util_dynarray_begin(&submit->gem_bos)),
          .frame = VOID2U64(frame),
          .frame_size = size,
       },
@@ -147,6 +148,7 @@ bool lima_submit_start(struct lima_submit *submit, void *frame, uint32_t size)
 
    bool ret = drmIoctl(submit->screen->fd, DRM_IOCTL_LIMA_GEM_SUBMIT, &req) == 0;
 
+   struct lima_submit_job *job = submit->current_job;
    if (ret) {
       job->fence = req.out.fence;
       list_add(&job->list, &submit->busy_job_list);
@@ -163,6 +165,7 @@ bool lima_submit_start(struct lima_submit *submit, void *frame, uint32_t size)
    else
       lima_submit_job_free(submit, job);
 
+   util_dynarray_clear(&submit->gem_bos);
    submit->current_job = NULL;
    return ret;
 }
@@ -194,11 +197,7 @@ bool lima_submit_wait(struct lima_submit *submit, uint64_t timeout_ns)
 
 bool lima_submit_has_bo(struct lima_submit *submit, struct lima_bo *bo, bool all)
 {
-   struct lima_submit_job *job = submit->current_job;
-   if (!job)
-      return false;
-
-   util_dynarray_foreach(&job->gem_bos, struct drm_lima_gem_submit_bo, gem_bo) {
+   util_dynarray_foreach(&submit->gem_bos, struct drm_lima_gem_submit_bo, gem_bo) {
       if (bo->handle == gem_bo->handle) {
          if (all)
             return true;
