@@ -50,6 +50,7 @@ struct lima_submit {
    uint32_t ctx;
 
    struct util_dynarray gem_bos;
+   struct util_dynarray deps;
 
    struct list_head busy_job_list;
    struct list_head free_job_list;
@@ -72,6 +73,7 @@ struct lima_submit *lima_submit_create(struct lima_context *ctx, uint32_t pipe)
    s->ctx = ctx->id;
 
    util_dynarray_init(&s->gem_bos, s);
+   util_dynarray_init(&s->deps, s);
 
    list_inithead(&s->busy_job_list);
    list_inithead(&s->free_job_list);
@@ -143,6 +145,8 @@ bool lima_submit_start(struct lima_submit *submit, void *frame, uint32_t size)
          .bos = VOID2U64(util_dynarray_begin(&submit->gem_bos)),
          .frame = VOID2U64(frame),
          .frame_size = size,
+         .deps = submit->deps.size ? VOID2U64(util_dynarray_begin(&submit->deps)) : 0,
+         .nr_deps = submit->deps.size / sizeof(union drm_lima_gem_submit_dep),
       },
    };
 
@@ -166,6 +170,7 @@ bool lima_submit_start(struct lima_submit *submit, void *frame, uint32_t size)
       lima_submit_job_free(submit, job);
 
    util_dynarray_clear(&submit->gem_bos);
+   util_dynarray_clear(&submit->deps);
    submit->current_job = NULL;
    return ret;
 }
@@ -234,4 +239,13 @@ bool lima_submit_wait_fence(struct lima_submit *submit, uint32_t fence,
    };
 
    return drmIoctl(submit->screen->fd, DRM_IOCTL_LIMA_WAIT_FENCE, &req) == 0;
+}
+
+bool lima_submit_add_dep(struct lima_submit *submit,
+                         union drm_lima_gem_submit_dep *dep)
+{
+   union drm_lima_gem_submit_dep *submit_dep =
+      util_dynarray_grow(&submit->deps, sizeof(*submit_dep));
+   *submit_dep = *dep;
+   return true;
 }

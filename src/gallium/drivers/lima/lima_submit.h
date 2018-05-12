@@ -30,6 +30,7 @@
 struct lima_context;
 struct lima_submit;
 struct lima_bo;
+union drm_lima_gem_submit_dep;
 
 struct lima_submit *lima_submit_create(struct lima_context *ctx, uint32_t pipe);
 bool lima_submit_add_bo(struct lima_submit *submit, struct lima_bo *bo, uint32_t flags);
@@ -39,5 +40,7 @@ bool lima_submit_has_bo(struct lima_submit *submit, struct lima_bo *bo, bool all
 bool lima_submit_get_fence(struct lima_submit *submit, uint32_t *fence);
 bool lima_submit_wait_fence(struct lima_submit *submit, uint32_t fence,
                             uint64_t timeout_ns);
+bool lima_submit_add_dep(struct lima_submit *submit,
+                         union drm_lima_gem_submit_dep *dep);
 
 #endif
