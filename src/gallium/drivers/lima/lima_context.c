@@ -38,6 +38,7 @@
 #include "lima_bo.h"
 #include "lima_submit.h"
 #include "lima_util.h"
+#include "lima_fence.h"
 
 #include <lima_drm.h>
 #include <xf86drm.h>
@@ -179,6 +180,7 @@ lima_context_create(struct pipe_screen *pscreen, void *priv, unsigned flags)
    ctx->base.destroy = lima_context_destroy;
 
    lima_resource_context_init(ctx);
+   lima_fence_context_init(ctx);
    lima_state_init(ctx);
    lima_draw_init(ctx);
    lima_program_init(ctx);

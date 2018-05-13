@@ -34,6 +34,7 @@
 #include "lima_program.h"
 #include "lima_vamgr.h"
 #include "lima_bo.h"
+#include "lima_fence.h"
 #include "ir/lima_ir.h"
 
 #include "xf86drm.h"
@@ -104,6 +105,7 @@ lima_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
    case PIPE_CAP_UMA:
    case PIPE_CAP_ALLOW_MAPPED_BUFFERS_DURING_EXECUTION:
    case PIPE_CAP_FORCE_COMPUTE_MINMAX_INDICES:
+   case PIPE_CAP_NATIVE_FENCE_FD:
       return 1;
 
    /* Unimplemented, but for exporting OpenGL 2.0 */
@@ -431,6 +433,7 @@ lima_screen_create(int fd, struct renderonly *ro)
    screen->base.get_compiler_options = lima_screen_get_compiler_options;
 
    lima_resource_screen_init(screen);
+   lima_fence_screen_init(screen);
 
    slab_create_parent(&screen->transfer_pool, sizeof(struct lima_transfer), 16);
 

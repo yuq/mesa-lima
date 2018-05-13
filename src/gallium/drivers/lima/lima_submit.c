@@ -49,6 +49,9 @@ struct lima_submit {
    uint32_t pipe;
    uint32_t ctx;
 
+   int sync_fd;
+   bool need_sync_fd;
+
    struct util_dynarray gem_bos;
    struct util_dynarray deps;
 
@@ -147,6 +150,7 @@ bool lima_submit_start(struct lima_submit *submit, void *frame, uint32_t size)
          .frame_size = size,
          .deps = submit->deps.size ? VOID2U64(util_dynarray_begin(&submit->deps)) : 0,
          .nr_deps = submit->deps.size / sizeof(union drm_lima_gem_submit_dep),
+         .flags = submit->need_sync_fd ? LIMA_SUBMIT_FLAG_SYNC_FD_OUT : 0,
       },
    };
 
@@ -156,6 +160,8 @@ bool lima_submit_start(struct lima_submit *submit, void *frame, uint32_t size)
    if (ret) {
       job->fence = req.out.fence;
       list_add(&job->list, &submit->busy_job_list);
+
+      submit->sync_fd = submit->need_sync_fd ? req.out.sync_fd : -1;
 
       int i = 0;
       list_for_each_entry_safe(struct lima_submit_job, j,
@@ -171,6 +177,7 @@ bool lima_submit_start(struct lima_submit *submit, void *frame, uint32_t size)
 
    util_dynarray_clear(&submit->gem_bos);
    util_dynarray_clear(&submit->deps);
+   submit->need_sync_fd = false;
    submit->current_job = NULL;
    return ret;
 }
@@ -248,4 +255,14 @@ bool lima_submit_add_dep(struct lima_submit *submit,
       util_dynarray_grow(&submit->deps, sizeof(*submit_dep));
    *submit_dep = *dep;
    return true;
+}
+
+void lima_submit_need_sync_fd(struct lima_submit *submit)
+{
+   submit->need_sync_fd = true;
+}
+
+int lima_submit_get_sync_fd(struct lima_submit *submit)
+{
+   return submit->sync_fd;
 }

@@ -49,4 +49,6 @@ C_SOURCES := \
 	  lima_util.h \
 	  lima_texture.c \
 	  lima_texture.h \
+	  lima_fence.c \
+	  lima_fence.h \
 	  $(ir_SOURCES)

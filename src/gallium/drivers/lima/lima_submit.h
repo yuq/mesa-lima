@@ -42,5 +42,7 @@ bool lima_submit_wait_fence(struct lima_submit *submit, uint32_t fence,
                             uint64_t timeout_ns);
 bool lima_submit_add_dep(struct lima_submit *submit,
                          union drm_lima_gem_submit_dep *dep);
+void lima_submit_need_sync_fd(struct lima_submit *submit);
+int lima_submit_get_sync_fd(struct lima_submit *submit);
 
 #endif
