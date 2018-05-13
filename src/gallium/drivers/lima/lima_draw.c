@@ -40,6 +40,7 @@
 #include "lima_submit.h"
 #include "lima_texture.h"
 #include "lima_util.h"
+#include "lima_fence.h"
 
 #include <lima_drm.h>
 
@@ -1070,14 +1071,9 @@ lima_pack_pp_frame_reg(struct lima_context *ctx, uint32_t *frame_reg,
    wb[0].mrt_bits = swap_channels ? 0x4 : 0x0;
 }
 
-void
-lima_flush(struct lima_context *ctx)
+static void
+_lima_flush(struct lima_context *ctx)
 {
-   if (!ctx->num_draws) {
-      debug_printf("%s: do nothing\n", __FUNCTION__);
-      return;
-   }
-
    lima_finish_plbu_cmd(ctx);
 
    int vs_cmd_size = ctx->vs_cmd_array.size;
@@ -1175,15 +1171,36 @@ lima_flush(struct lima_context *ctx)
    ctx->plb_index = (ctx->plb_index + 1) % lima_ctx_num_plb;
 }
 
+void
+lima_flush(struct lima_context *ctx)
+{
+   if (!ctx->num_draws) {
+      debug_printf("%s: do nothing\n", __FUNCTION__);
+      return;
+   }
+
+   _lima_flush(ctx);
+}
+
 static void
 lima_pipe_flush(struct pipe_context *pctx, struct pipe_fence_handle **fence,
                 unsigned flags)
 {
-   debug_checkpoint();
    debug_printf("%s: flags=%x\n", __FUNCTION__, flags);
 
    struct lima_context *ctx = lima_context(pctx);
-   lima_flush(ctx);
+   if (!ctx->num_draws) {
+      debug_printf("%s: do nothing\n", __FUNCTION__);
+      return;
+   }
+
+   if ((flags & PIPE_FLUSH_FENCE_FD) && fence)
+      lima_submit_need_sync_fd(ctx->pp_submit);
+
+   _lima_flush(ctx);
+
+   if (fence)
+      *fence = lima_fence_create(ctx, lima_submit_get_sync_fd(ctx->pp_submit));
 }
 
 void
