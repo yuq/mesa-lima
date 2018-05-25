@@ -44,9 +44,10 @@ struct pipe_fence_handle {
 static void
 lima_create_fence_fd(struct pipe_context *pctx,
                      struct pipe_fence_handle **fence,
-                     int fd)
+                     int fd, enum pipe_fd_type type)
 {
    debug_printf("%s: fd=%d\n", __FUNCTION__, fd);
+   assert(type == PIPE_FD_TYPE_NATIVE_SYNC);
 
    struct lima_context *ctx = lima_context(pctx);
    *fence = lima_fence_create(ctx, dup(fd));
