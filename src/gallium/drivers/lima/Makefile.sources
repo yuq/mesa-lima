@@ -51,4 +51,6 @@ C_SOURCES := \
 	  lima_texture.h \
 	  lima_fence.c \
 	  lima_fence.h \
+	  lima_tiling.c \
+	  lima_tiling.h \
 	  $(ir_SOURCES)
