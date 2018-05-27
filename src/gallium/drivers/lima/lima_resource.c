@@ -387,7 +387,7 @@ lima_transfer_map(struct pipe_context *pctx,
    if (res->tiled) {
       uint32_t box_x1, box_y1, box_x2, box_y2;
       uint32_t box_start_x, box_start_y;
-      bool needs_load = false;
+      bool load_border;
 
       /* No direct mappings of tiled, since we need to manually
        * tile/untile.
@@ -395,19 +395,15 @@ lima_transfer_map(struct pipe_context *pctx,
       if (usage & PIPE_TRANSFER_MAP_DIRECTLY)
          return NULL;
 
-      if (usage & PIPE_TRANSFER_READ)
-         needs_load = true;
-
       box_start_x = ptrans->box.x & 15;
       box_start_y = ptrans->box.y & 15;
 
-      /* TODO: load only borders, not whole box */
       if (box_start_x || box_start_y)
-         needs_load = true;
+         load_border = true;
 
       if (((ptrans->box.x + ptrans->box.width) & 15) ||
           ((ptrans->box.y + ptrans->box.height) & 15))
-         needs_load = true;
+         load_border = true;
 
       /* Align box to tile boundaries */
       box_x1 = align(ptrans->box.x, 16);
@@ -420,11 +416,45 @@ lima_transfer_map(struct pipe_context *pctx,
       ptrans->box.width = box_x2 - box_x1;
       ptrans->box.height = box_y2 - box_y1;
       trans->map = malloc(ptrans->stride * ptrans->box.height * ptrans->box.depth);
-      if (needs_load)
+      if (usage & PIPE_TRANSFER_READ ||
+         (load_border && (ptrans->box.width == 16 || ptrans->box.height == 16)))
          lima_load_tiled_image(trans->map, bo->map,
                               &ptrans->box,
                               ptrans->stride,
                               util_format_get_blocksize(pres->format));
+      else if (load_border && ptrans->box.width > 16 && ptrans->box.height > 16) {
+         struct pipe_box box;
+
+         box.x = ptrans->box.x;
+         box.y = ptrans->box.y;
+         box.width = 16;
+         box.height = ptrans->box.height;
+         lima_load_tiled_image(trans->map, bo->map,
+                              &box,
+                              ptrans->stride,
+                              util_format_get_blocksize(pres->format));
+         box.x = ptrans->box.x + ptrans->box.width - 16;
+         lima_load_tiled_image(trans->map, bo->map,
+                              &box,
+                              ptrans->stride,
+                              util_format_get_blocksize(pres->format));
+
+         if (ptrans->box.width > 32) {
+            box.x = ptrans->box.x + 16;
+            box.width = ptrans->box.width - 32;
+            box.height = 16;
+            box.y = ptrans->box.y;
+            lima_load_tiled_image(trans->map, bo->map,
+                                 &box,
+                                 ptrans->stride,
+                                 util_format_get_blocksize(pres->format));
+            box.y = ptrans->box.y + ptrans->box.height - 16;
+            lima_load_tiled_image(trans->map, bo->map,
+                                 &box,
+                                 ptrans->stride,
+                                 util_format_get_blocksize(pres->format));
+         }
+      }
       return trans->map + box->z * ptrans->layer_stride +
          box_start_y / util_format_get_blockheight(pres->format) * ptrans->stride +
          box_start_x / util_format_get_blockwidth(pres->format) *
