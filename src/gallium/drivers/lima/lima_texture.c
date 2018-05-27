@@ -95,8 +95,10 @@ lima_update_tex_desc(struct lima_context *ctx, struct lima_sampler_state *sample
    width = prsc->width0;
    height = prsc->height0;
 
-   /* "Swizzled" textures aren't supported yet */
-   layout = 0;
+   if (lima_res->tiled)
+      layout = 3;
+   else
+      layout = 0;
 
    desc[0] = pipe_format_to_lima(prsc->format);
 
