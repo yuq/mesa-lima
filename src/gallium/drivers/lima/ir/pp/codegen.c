@@ -38,6 +38,13 @@ static unsigned encode_swizzle(uint8_t *swizzle, int shift, int dest_shift)
    return ret;
 }
 
+static int get_scl_reg_index(ppir_src *src, int component)
+{
+   int ret = ppir_target_get_src_reg_index(src);
+   ret += src->swizzle[component];
+   return ret;
+}
+
 static void ppir_codegen_encode_varying(ppir_node *node, void *code)
 {
    ppir_codegen_field_varying *f = code;
@@ -194,13 +201,13 @@ static void ppir_codegen_encode_scl_mul(ppir_node *node, void *code)
    }
 
    ppir_src *src = alu->src;
-   f->arg0_source = ppir_target_get_src_reg_index(src);
+   f->arg0_source = get_scl_reg_index(src, dest_component);
    f->arg0_absolute = src->absolute;
    f->arg0_negate = src->negate;
 
    if (alu->num_src == 2) {
       src = alu->src + 1;
-      f->arg1_source = ppir_target_get_src_reg_index(src);
+      f->arg1_source = get_scl_reg_index(src, dest_component);
       f->arg1_absolute = src->absolute;
       f->arg1_negate = src->negate;
    }
@@ -295,13 +302,13 @@ static void ppir_codegen_encode_scl_add(ppir_node *node, void *code)
        src->pipeline == ppir_pipeline_reg_fmul)
       f->mul_in = true;
    else
-      f->arg0_source = ppir_target_get_src_reg_index(src);
+      f->arg0_source = get_scl_reg_index(src, dest_component);
    f->arg0_absolute = src->absolute;
    f->arg0_negate = src->negate;
 
    if (alu->num_src == 2) {
       src = alu->src + 1;
-      f->arg1_source = ppir_target_get_src_reg_index(src);
+      f->arg1_source = get_scl_reg_index(src, dest_component);
       f->arg1_absolute = src->absolute;
       f->arg1_negate = src->negate;
    }
@@ -328,8 +335,7 @@ static void ppir_codegen_encode_combine(ppir_node *node, void *code)
       f->scalar.dest = dest->modifier;
 
       ppir_src *src = alu->src;
-      int src_component = src->swizzle[dest_component];
-      f->scalar.arg0_src = ppir_target_get_src_reg_index(src) + src_component;
+      f->scalar.arg0_src = get_scl_reg_index(src, dest_component);
       f->scalar.arg0_absolute = src->absolute;
       f->scalar.arg0_negate = src->negate;
 
