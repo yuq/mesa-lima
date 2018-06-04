@@ -1,5 +1,7 @@
 /*
- * Copyright (c) 2017 Lima Project
+ * Copyright (c) 2011-2013 Luc Verhaegen <libv@skynet.be>
+ * Copyright (c) 2018 Alyssa Rosenzweig <alyssa@rosenzweig.io>
+ * Copyright (c) 2018 Lima Project
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -22,55 +24,19 @@
  *
  */
 
-#ifndef H_LIMA_RESOURCE
-#define H_LIMA_RESOURCE
+#ifndef H_LIMA_TILING
+#define H_LIMA_TILING
 
-#include "pipe/p_state.h"
+#include "util/u_box.h"
 
-struct lima_screen;
+void lima_load_tiled_image(void *dst, const void *src,
+                           const struct pipe_box *box,
+                           uint32_t stride,
+                           uint32_t bpp);
 
-struct lima_resource {
-   struct pipe_resource base;
-
-   struct renderonly_scanout *scanout;
-   struct lima_bo *bo;
-   uint32_t stride;
-   bool tiled;
-};
-
-struct lima_surface {
-   struct pipe_surface base;
-   int tiled_w, tiled_h;
-};
-
-struct lima_transfer {
-   struct pipe_transfer base;
-   struct lima_resource *res;
-   void *map;
-};
-
-static inline struct lima_resource *
-lima_resource(struct pipe_resource *res)
-{
-   return (struct lima_resource *)res;
-}
-
-static inline struct lima_surface *
-lima_surface(struct pipe_surface *surf)
-{
-   return (struct lima_surface *)surf;
-}
-
-static inline struct lima_transfer *
-lima_transfer(struct pipe_transfer *trans)
-{
-   return (struct lima_transfer *)trans;
-}
-
-void
-lima_resource_screen_init(struct lima_screen *screen);
-
-void
-lima_resource_context_init(struct lima_context *ctx);
+void lima_store_tiled_image(void *dst, const void *src,
+                           const struct pipe_box *box,
+                           uint32_t stride,
+                           uint32_t bpp);
 
 #endif
