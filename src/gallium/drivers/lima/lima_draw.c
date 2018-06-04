@@ -1067,7 +1067,13 @@ lima_pack_pp_frame_reg(struct lima_context *ctx, uint32_t *frame_reg,
    wb[0].type = 0x02; /* 1 for depth, stencil */
    wb[0].address = res->bo->va;
    wb[0].pixel_format = 0x03; /* BGRA8888 */
-   wb[0].pitch = res->stride / 8;
+   if (res->tiled) {
+      wb[0].pixel_layout = 0x2;
+      wb[0].pitch = align(ctx->framebuffer.width, 16) / 16;
+   } else {
+      wb[0].pixel_layout = 0x0;
+      wb[0].pitch = res->stride / 8;
+   }
    wb[0].mrt_bits = swap_channels ? 0x4 : 0x0;
 }
 

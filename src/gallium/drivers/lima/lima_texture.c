@@ -95,8 +95,10 @@ lima_update_tex_desc(struct lima_context *ctx, struct lima_sampler_state *sample
    width = prsc->width0;
    height = prsc->height0;
 
-   /* "Swizzled" textures aren't supported yet */
-   layout = 0;
+   if (lima_res->tiled)
+      layout = 3;
+   else
+      layout = 0;
 
    desc[0] = pipe_format_to_lima(prsc->format);
 
@@ -175,8 +177,8 @@ lima_update_textures(struct lima_context *ctx)
 
    assert (lima_tex->num_samplers <= 16);
 
-   /* Nothing to do - we have no samplers */
-   if (!lima_tex->num_samplers)
+   /* Nothing to do - we have no samplers or textures */
+   if (!lima_tex->num_samplers || !lima_tex->num_textures)
       return;
 
    unsigned size = lima_tex_list_size + lima_tex->num_samplers * lima_tex_desc_size;
