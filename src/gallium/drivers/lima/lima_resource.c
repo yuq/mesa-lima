@@ -155,6 +155,23 @@ lima_resource_create(struct pipe_screen *pscreen,
    return pres;
 }
 
+static struct pipe_resource *
+lima_resource_create_with_modifiers(struct pipe_screen *pscreen,
+                                   const struct pipe_resource *templat,
+                                   const uint64_t *modifiers,
+                                   int count)
+{
+   struct pipe_resource tmpl = *templat;
+
+   /*
+    * We currently assume that all buffers allocated through this interface
+    * should be scanout enabled.
+    */
+   tmpl.bind |= PIPE_BIND_SCANOUT;
+
+   return lima_resource_create(pscreen, &tmpl);
+}
+
 static void
 lima_resource_destroy(struct pipe_screen *pscreen, struct pipe_resource *pres)
 {
@@ -237,6 +254,7 @@ void
 lima_resource_screen_init(struct lima_screen *screen)
 {
    screen->base.resource_create = lima_resource_create;
+   screen->base.resource_create_with_modifiers = lima_resource_create_with_modifiers;
    screen->base.resource_from_handle = lima_resource_from_handle;
    screen->base.resource_destroy = lima_resource_destroy;
    screen->base.resource_get_handle = lima_resource_get_handle;
